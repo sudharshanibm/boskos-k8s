@@ -1,0 +1,13 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: resources
+  namespace: test-pods
+data:
+  boskos-resources.yaml: |
+    resources:
+      - type: "vpc-service"
+        state: free
+        names:
+          - "shan-demo-1"
+          - "shan-demo-2"

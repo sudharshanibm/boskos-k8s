@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boskos-janitor-ibmcloud
+  labels:
+    app: boskos-janitor-ibmcloud
+  namespace: test-pods
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: boskos-janitor-ibmcloud
+  template:
+    metadata:
+      labels:
+        app: boskos-janitor-ibmcloud
+    spec:
+      terminationGracePeriodSeconds: 300
+      containers:
+      - name: boskos-janitor-ibmcloud
+        image: gcr.io/k8s-staging-boskos/ibmcloud-janitor-boskos:latest
+        args:
+        - --boskos-url=http://boskos.test-pods.svc.cluster.local.
+        env: 
+        - name: IBMCLOUD_ENV_FILE
+          value: "/home/.ibmcloud/key"
+        volumeMounts:
+          - name: credentials
+            mountPath: /home/.ibmcloud
+      volumes:
+        - name: credentials
+          secret:
+            secretName: ibmcloud-janitor-secret
