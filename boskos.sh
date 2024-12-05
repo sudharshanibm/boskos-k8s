@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 NAMESPACE="test-pods"
 BOSKOS_FOLDER="./boskos"
 IBM_JANITOR_FOLDER="./ibm-janitor"
