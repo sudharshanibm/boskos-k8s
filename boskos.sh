@@ -96,6 +96,7 @@ kubectl exec -n $NAMESPACE debug-pod -- apt-get install -y curl || { echo "Faile
 
 echo "Running curl command inside the debug pod..."
 kubectl exec -n $NAMESPACE debug-pod -- curl -X POST -d "{\"api-key\":\"$API_KEY\",\"region\":\"eu-de\",\"resource-group\":\"rZVPCcloudRG\"}" "http://boskos.test-pods.svc.cluster.local/acquire?type=vpc-service&name=$RESOURCE_NAME&state=free&dest=dirty&owner=IBMCloudJanitor" || { echo "Failed to run curl command inside the debug pod"; exit 1; }
+kubectl exec -n $NAMESPACE debug-pod -- curl -X POST -d "{\"api-key\":\"$API_KEY\",\"region\":\"eu-de\",\"resource-group\":\"rZVPCcloudRG\"}" "http://boskos.test-pods.svc.cluster.local/update?type=vpc-service&name=$RESOURCE_NAME&state=dirty&owner=IBMCloudJanitor" || { echo "Failed to run curl command inside the debug pod"; exit 1; }
 
 echo "Checking the status of resources..."
 kubectl get resources -n $NAMESPACE | grep "$RESOURCE_NAME" | grep "dirty" || { echo "Resource $RESOURCE_NAME is not in 'dirty' state"; exit 1; }
