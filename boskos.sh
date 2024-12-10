@@ -6,6 +6,40 @@ NAMESPACE="test-pods"
 
 BOSKOS_FOLDER="./boskos"
 IBM_JANITOR_FOLDER="./ibm-janitor"
+CONFIGMAP_FILE="$BOSKOS_FOLDER/boskos-configmap.yaml"
+
+# Check if the resource name is provided as an argument
+if [ -z "$1" ]; then
+  echo "Resource name not provided as a parameter."
+  read -p "Please enter the resource name: " RESOURCE_NAME
+  if [ -z "$RESOURCE_NAME" ]; then
+    echo "Resource name is required. Exiting."
+    exit 1
+  fi
+else
+  RESOURCE_NAME="$1"
+fi
+
+update_configmap() {
+  local configmap_path=$1
+  local resource_name=$2
+
+  echo "Updating ConfigMap at $configmap_path with resource name: $resource_name..."
+  cat <<EOF > "$configmap_path"
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: resources
+  namespace: $NAMESPACE
+data:
+  boskos-resources.yaml: |
+    resources:
+      - type: "vpc-service"
+        state: free
+        names:
+          - $resource_name
+EOF
+}
 
 clear_resources() {
   local namespace=$1
@@ -28,6 +62,9 @@ wait_for_resources() {
 }
 
 clear_resources $NAMESPACE
+
+# Update the ConfigMap with the user-provided resource name
+update_configmap $CONFIGMAP_FILE $RESOURCE_NAME
 
 echo "Applying YAML files from $BOSKOS_FOLDER and $IBM_JANITOR_FOLDER..."
 kubectl apply -f $BOSKOS_FOLDER || { echo "Failed to apply YAML files from $BOSKOS_FOLDER"; exit 1; }
@@ -58,9 +95,9 @@ kubectl exec -n $NAMESPACE debug-pod -- apt-get update || { echo "Failed to upda
 kubectl exec -n $NAMESPACE debug-pod -- apt-get install -y curl || { echo "Failed to install curl in debug pod"; exit 1; }
 
 echo "Running curl command inside the debug pod..."
-kubectl exec -n $NAMESPACE debug-pod -- curl -X POST -d "{\"api-key\":\"$API_KEY\",\"region\":\"eu-de\",\"resource-group\":\"rZVPCcloudRG\"}" "http://boskos.test-pods.svc.cluster.local/acquire?type=vpc-service&name=lozk8s&state=free&dest=dirty&owner=IBMCloudJanitor" || { echo "Failed to run curl command inside the debug pod"; exit 1; }
+kubectl exec -n $NAMESPACE debug-pod -- curl -X POST -d "{\"api-key\":\"$API_KEY\",\"region\":\"eu-de\",\"resource-group\":\"rZVPCcloudRG\"}" "http://boskos.test-pods.svc.cluster.local/acquire?type=vpc-service&name=$RESOURCE_NAME&state=free&dest=dirty&owner=IBMCloudJanitor" || { echo "Failed to run curl command inside the debug pod"; exit 1; }
 
 echo "Checking the status of resources..."
-kubectl get resources -n $NAMESPACE | grep "lozk8s" | grep "dirty" || { echo "Resource lozk8s is not in 'dirty' state"; exit 1; }
+kubectl get resources -n $NAMESPACE | grep "$RESOURCE_NAME" | grep "dirty" || { echo "Resource $RESOURCE_NAME is not in 'dirty' state"; exit 1; }
 
-clear_resources $NAMESPACE
+# clear_resources $NAMESPACE
