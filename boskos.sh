@@ -7,6 +7,19 @@ NAMESPACE="test-pods"
 BOSKOS_FOLDER="./boskos"
 IBM_JANITOR_FOLDER="./ibm-janitor"
 
+if [ -z "$IBM_API_KEY" ]; then
+  echo "Please export your API key as an environment variable using: export IBM_API_KEY=<your-api-key>"
+  exit 1
+fi
+
+create_secret() {
+  local namespace=$1
+  echo "Creating Kubernetes secret for the IBM API key in namespace $namespace..."
+  kubectl create secret generic ibmcloud-janitor-secret \
+    --from-literal=api-key="$IBM_API_KEY" \
+    -n $namespace --dry-run=client -o yaml | kubectl apply -f - || { echo "Failed to create secret"; exit 1; }
+}
+
 clear_resources() {
   local namespace=$1
   echo "Clearing all resources in namespace $namespace..."
@@ -28,6 +41,8 @@ wait_for_resources() {
 }
 
 clear_resources $NAMESPACE
+
+create_secret $NAMESPACE
 
 echo "Applying YAML files from $BOSKOS_FOLDER and $IBM_JANITOR_FOLDER..."
 kubectl apply -f $BOSKOS_FOLDER || { echo "Failed to apply YAML files from $BOSKOS_FOLDER"; exit 1; }
