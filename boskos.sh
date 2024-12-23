@@ -92,13 +92,35 @@ kubectl wait --for=condition=Ready pod/debug-pod -n $NAMESPACE --timeout=120s ||
 
 echo "Installing curl in the debug pod..."
 kubectl exec -n $NAMESPACE debug-pod -- apt-get update || { echo "Failed to update apt-get in debug pod"; exit 1; }
-kubectl exec -n $NAMESPACE debug-pod -- apt-get install -y curl || { echo "Failed to install curl in debug pod"; exit 1; }
+kubectl exec -n $NAMESPACE debug-pod -- apt-get install -y curl jq || { echo "Failed to install curl and jq in debug pod"; exit 1; }
 
 echo "Running curl command inside the debug pod..."
-kubectl exec -n $NAMESPACE debug-pod -- curl -X POST -d "{\"api-key\":\"$API_KEY\",\"region\":\"eu-de\",\"resource-group\":\"rZVPCcloudRG\"}" "http://boskos.test-pods.svc.cluster.local/acquire?type=vpc-service&name=$RESOURCE_NAME&state=free&dest=dirty&owner=IBMCloudJanitor" || { echo "Failed to run curl command inside the debug pod"; exit 1; }
-kubectl exec -n $NAMESPACE debug-pod -- curl -X POST -d "{\"api-key\":\"$API_KEY\",\"region\":\"eu-de\",\"resource-group\":\"rZVPCcloudRG\"}" "http://boskos.test-pods.svc.cluster.local/update?type=vpc-service&name=$RESOURCE_NAME&state=dirty&owner=IBMCloudJanitor" || { echo "Failed to run curl command inside the debug pod"; exit 1; }
+OUTPUT=$(kubectl exec -n $NAMESPACE debug-pod -- curl -s -X POST -d "{\"api-key\":\"$API_KEY\",\"region\":\"eu-de\",\"resource-group\":\"rZVPCcloudRG\"}" "http://boskos.test-pods.svc.cluster.local/acquire?type=vpc-service&name=$RESOURCE_NAME&state=free&dest=dirty&owner=IBMCloudJanitor")
+if [[ -z "$OUTPUT" ]]; then
+  echo "Curl command did not produce output"
+  exit 1
+fi
+
+echo "Extracting values from the response..."
+REGION=$(echo "$OUTPUT" | jq -r '.userdata.region')
+API_KEY=$(echo "$OUTPUT" | jq -r '.userdata["api-key"]')
+RESOURCE_GROUP=$(echo "$OUTPUT" | jq -r '.userdata["resource-group"]')
+
+if [[ -z "$REGION" || -z "$API_KEY" || -z "$RESOURCE_GROUP" ]]; then
+  echo "Failed to extract required values from the response"
+  exit 1
+fi
+
+echo "Extracted values:"
+echo "Region: $REGION"
+echo "API Key: $API_KEY"
+echo "Resource Group: $RESOURCE_GROUP"
+
+echo "Updating the resource state inside the debug pod..."
+kubectl exec -n $NAMESPACE debug-pod -- curl -s -X POST -d "{\"api-key\":\"$API_KEY\",\"region\":\"$REGION\",\"resource-group\":\"$RESOURCE_GROUP\"}" "http://boskos.test-pods.svc.cluster.local/update?type=vpc-service&name=$RESOURCE_NAME&state=dirty&owner=IBMCloudJanitor" || { echo "Failed to update resource state"; exit 1; }
 
 echo "Checking the status of resources..."
 kubectl get resources -n $NAMESPACE | grep "$RESOURCE_NAME" | grep "dirty" || { echo "Resource $RESOURCE_NAME is not in 'dirty' state"; exit 1; }
 
 # clear_resources $NAMESPACE
+
