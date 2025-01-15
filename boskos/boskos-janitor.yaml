@@ -38,16 +38,15 @@ spec:
         image: gcr.io/k8s-staging-boskos/ibmcloud-janitor-boskos:latest
         args:
         - --boskos-url=http://boskos.test-pods.svc.cluster.local.
-        - -ignore-api-key=true
+        - --debug
+        - --ignore-api-key=true
         env:
-        - name: IBMCLOUD_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: ibmcloud-janitor-secret
-              key: api-key 
+        - name: IBMCLOUD_ENV_FILE
+          value: "/home/.ibmcloud/key"
         volumeMounts:
         - name: credentials
-          mountPath: /home/.ibmcloud
+          mountPath: /home/.ibmcloud/key
+          subPath: key  # Mount the key as a file named "key"
           readOnly: true
       volumes:
       - name: credentials
