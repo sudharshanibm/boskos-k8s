@@ -13,7 +13,7 @@ metadata:
   namespace: test-pods
 type: Opaque
 data:
-  key: dzRFT3dIQWNXMzBkT2l3cS1nVXQtS0c3TVVudFRUc08wMDNpRFFhTEczUEsK
+  key: OF80ZjJnZ1lMbDJDMmNnSmFaa2Z5OE53MkxncU11bGxuQjRfM0pnVWgyNE4K
 ---
 apiVersion: apps/v1
 kind: Deployment
