@@ -39,14 +39,13 @@ spec:
         args:
         - --boskos-url=http://boskos.test-pods.svc.cluster.local.
         - --debug
-        - --ignore-api-key=true
         env:
         - name: IBMCLOUD_ENV_FILE
-          value: "/home/.ibmcloud/key"  # Make sure this path points to the key
+          value: "/home/.ibmcloud/key"
         volumeMounts:
         - name: credentials
-          mountPath: /home/.ibmcloud  # Secret is mounted here
+          mountPath: /home/.ibmcloud
       volumes:
       - name: credentials
         secret:
-          secretName: ibmcloud-janitor-secret  # Secret that contains the key
+          secretName: ibmcloud-janitor-secret
