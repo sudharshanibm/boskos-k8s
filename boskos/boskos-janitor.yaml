@@ -39,6 +39,9 @@ spec:
         args:
         - --boskos-url=http://boskos.test-pods.svc.cluster.local.
         - --debug
+        env:
+        - name: IBMCLOUD_ENV_FILE
+          value: "/home/.ibmcloud/key"
         volumeMounts:
         - name: credentials
           mountPath: /home/.ibmcloud
@@ -51,4 +54,5 @@ spec:
           mountPath: /home/.ibmcloud
       volumes:
       - name: credentials
-        emptyDir: {}
+        secret:
+          secretName: ibmcloud-janitor-secret
