@@ -13,7 +13,7 @@ metadata:
   namespace: test-pods
 type: Opaque
 data:
-  api-key: dzRFT3dIQWNXMzBkT2l3cS1nVXQtS0c3TVVudFRUc08wMDNpRFFhTEczUEsK
+  key: dzRFT3dIQWNXMzBkT2l3cS1nVXQtS0c3TVVudFRUc08wMDNpRFFhTEczUEsK
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -42,13 +42,11 @@ spec:
         - --ignore-api-key=true
         env:
         - name: IBMCLOUD_ENV_FILE
-          value: "/home/.ibmcloud/key"
+          value: "/home/.ibmcloud/key"  # Make sure this path points to the key
         volumeMounts:
         - name: credentials
-          mountPath: /home/.ibmcloud/key
-          subPath: key  # Mount the key as a file named "key"
-          readOnly: true
+          mountPath: /home/.ibmcloud  # Secret is mounted here
       volumes:
       - name: credentials
         secret:
-          secretName: ibmcloud-janitor-secret
+          secretName: ibmcloud-janitor-secret  # Secret that contains the key
