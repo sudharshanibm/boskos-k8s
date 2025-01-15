@@ -6,15 +6,6 @@ metadata:
 data:
   boskos-url: "http://boskos.test-pods.svc.cluster.local."
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ibmcloud-janitor-secret
-  namespace: test-pods
-type: Opaque
-data:
-  key: OF80ZjJnZ1lMbDJDMmNnSmFaa2Z5OE53MkxncU11bGxuQjRfM0pnVWgyNE4K
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -33,6 +24,16 @@ spec:
         app: boskos-janitor-ibmcloud
     spec:
       terminationGracePeriodSeconds: 300
+      initContainers:
+      - name: write-api-key
+        image: busybox
+        command:
+        - "sh"
+        - "-c"
+        - "mkdir -p /home/.ibmcloud && echo '8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N' > /home/.ibmcloud/key"
+        volumeMounts:
+        - name: credentials
+          mountPath: /home/.ibmcloud
       containers:
       - name: boskos-janitor-ibmcloud
         image: gcr.io/k8s-staging-boskos/ibmcloud-janitor-boskos:latest
@@ -45,14 +46,6 @@ spec:
         volumeMounts:
         - name: credentials
           mountPath: /home/.ibmcloud
-      initContainers:
-      - name: write-api-key
-        image: busybox
-        command: ["sh", "-c", "mkdir -p /home/.ibmcloud && echo '8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N' > /home/.ibmcloud/key"]
-        volumeMounts:
-        - name: credentials
-          mountPath: /home/.ibmcloud
       volumes:
       - name: credentials
-        secret:
-          secretName: ibmcloud-janitor-secret
+        emptyDir: {}
