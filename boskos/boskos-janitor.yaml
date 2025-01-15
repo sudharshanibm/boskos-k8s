@@ -13,7 +13,7 @@ metadata:
   namespace: test-pods
 type: Opaque
 data:
-  key: dzRFT3dIQWNXMzBkT2l3cS1nVXQtS0c3TVVudFRUc08wMDNpRFFhTEczUEsK
+  api-key: dzRFT3dIQWNXMzBkT2l3cS1nVXQtS0c3TVVudFRUc08wMDNpRFFhTEczUEsK
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -40,12 +40,16 @@ spec:
         - --boskos-url=http://boskos.test-pods.svc.cluster.local.
         - -ignore-api-key=true
         env:
-        - name: IBMCLOUD_ENV_FILE
-          value: "/home/.ibmcloud/key"  # Make sure this path points to the key
+        - name: IBMCLOUD_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ibmcloud-janitor-secret
+              key: api-key 
         volumeMounts:
         - name: credentials
-          mountPath: /home/.ibmcloud  # Secret is mounted here
+          mountPath: /home/.ibmcloud
+          readOnly: true
       volumes:
       - name: credentials
         secret:
-          secretName: ibmcloud-janitor-secret  # Secret that contains the key
+          secretName: ibmcloud-janitor-secret
