@@ -39,6 +39,8 @@ spec:
         image: gcr.io/k8s-staging-boskos/ibmcloud-janitor-boskos:latest
         args:
         - --boskos-url=http://boskos.test-pods.svc.cluster.local.
+        - --debug
+        - --ignore-api-key=true
         env: 
         - name: IBMCLOUD_ENV_FILE
           value: "/home/.ibmcloud/key"
