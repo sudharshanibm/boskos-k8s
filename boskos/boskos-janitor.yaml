@@ -6,15 +6,16 @@ metadata:
 data:
   boskos-url: "http://boskos.test-pods.svc.cluster.local."
 ---
-# apiVersion: v1
-# kind: Secret
-# metadata:
-#   name: ibmcloud-janitor-secret
-#   namespace: test-pods
-# type: Opaque
-# data:
-#   key: OF80ZjJnZ1lMbDJDMmNnSmFaa2Z5OE53MkxncU11bGxuQjRfM0pnVWgyNE4K
-# ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ibmcloud-janitor-secret
+  namespace: test-pods
+type: Opaque
+stringData:
+  key: |-
+    api-key=8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
