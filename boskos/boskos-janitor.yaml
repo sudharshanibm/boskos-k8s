@@ -7,10 +7,9 @@ data:
   boskos-url: "http://boskos.test-pods.svc.cluster.local."
 ---
 apiVersion: external-secrets.io/v1beta1
-kind: SecretStore
+kind: ClusterSecretStore
 metadata:
-  name: ibmcloud-secrets-store
-  namespace: test-pods
+  name: secretstore-ibm
 spec:
   provider:
     ibm:
@@ -33,18 +32,20 @@ stringData:
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
-  name: ibmcloud-janitor-api-key
+  name: external-secret-janitor
   namespace: test-pods
 spec:
+  refreshInterval: 60m
   secretStoreRef:
-    name: ibmcloud-secrets-store
-    kind: SecretStore
+    name: secretstore-ibm
+    kind: ClusterSecretStore
   target:
     name: ibmcloud-janitor-secret
+    creationPolicy: Owner
   data:
     - secretKey: api-key
       remoteRef:
-        key: "https://4aa82246-ef34-421d-9a17-cd561e99e061.us-south.secrets-manager.appdomain.cloud"
+        key: "4ab84e09-618b-f8cd-5181-fc8f7a214505"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -69,9 +70,9 @@ spec:
         - --boskos-url=http://boskos.test-pods.svc.cluster.local.
         - --debug
         - --ignore-api-key=true
-        env: 
-        - name: IBMCLOUD_ENV_FILE
-          value: "/home/.ibmcloud/key"
+        env:
+          - name: IBMCLOUD_ENV_FILE
+            value: "/home/.ibmcloud/api-key"
         volumeMounts:
           - name: credentials
             mountPath: /home/.ibmcloud
