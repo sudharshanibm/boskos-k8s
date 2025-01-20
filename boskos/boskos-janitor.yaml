@@ -16,6 +16,21 @@ stringData:
   api-key: "8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N"
 ---
 apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: secretstore-ibm
+spec:
+  provider:
+    ibm:
+      serviceUrl: "https://4aa82246-ef34-421d-9a17-cd561e99e061.us-south.secrets-manager.appdomain.cloud"
+      auth:
+        secretRef:
+          secretApiKeySecretRef:
+            name: ibm-cloud-credentials
+            key: IBMCLOUD_API_KEY
+            namespace: test-pods
+---
+apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
   name: external-secret-janitor
