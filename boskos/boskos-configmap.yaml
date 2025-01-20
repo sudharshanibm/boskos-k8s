@@ -7,6 +7,6 @@ data:
   boskos-resources.yaml: |
     resources:
       - type: "vpc-service"
-        state: dirty
+        state: free
         names:
         - "s390x-k8s-conformance"
