@@ -10,11 +10,10 @@ apiVersion: external-secrets.io/v1beta1
 kind: SecretStore
 metadata:
   name: ibmcloud-secrets-store
-  namespace: test-pods
 spec:
   provider:
     ibm:
-      serviceURL: "https://4aa82246-ef34-421d-9a17-cd561e99e061.us-south.secrets-manager.appdomain.cloud"
+      serviceUrl: "https://4aa82246-ef34-421d-9a17-cd561e99e061.us-south.secrets-manager.appdomain.cloud"
       auth:
         secretRef:
           secretApiKeySecretRef:
