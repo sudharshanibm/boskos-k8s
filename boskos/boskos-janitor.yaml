@@ -6,6 +6,21 @@ metadata:
 data:
   boskos-url: "http://boskos.test-pods.svc.cluster.local."
 ---
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: ibmcloud-secrets-store
+  namespace: test-pods
+spec:
+  provider:
+    ibm:
+      serviceURL: "https://4aa82246-ef34-421d-9a17-cd561e99e061.us-south.secrets-manager.appdomain.cloud"
+      auth:
+        secretRef:
+          secretApiKeySecretRef:
+            name: ibmcloud-janitor-secret
+            key: api-key
+---
 apiVersion: v1
 kind: Secret
 metadata:
@@ -13,15 +28,30 @@ metadata:
   namespace: test-pods
 type: Opaque
 stringData:
-  key: |-
-    api-key=8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N
+  api-key: "8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N"
+
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: ibmcloud-janitor-api-key
+  namespace: test-pods
+spec:
+  secretStoreRef:
+    name: ibmcloud-secrets-store
+    kind: SecretStore
+  target:
+    name: ibmcloud-janitor-secret
+  data:
+    - secretKey: api-key
+      remoteRef:
+        key: https://4aa82246-ef34-421d-9a17-cd561e99e061.us-south.secrets-manager.appdomain.cloud
+
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: boskos-janitor-ibmcloud
-  labels:
-    app: boskos-janitor-ibmcloud
   namespace: test-pods
 spec:
   replicas: 2
@@ -39,8 +69,6 @@ spec:
         image: gcr.io/k8s-staging-boskos/ibmcloud-janitor-boskos:latest
         args:
         - --boskos-url=http://boskos.test-pods.svc.cluster.local.
-        - --debug
-        - --ignore-api-key=true
         env: 
         - name: IBMCLOUD_ENV_FILE
           value: "/home/.ibmcloud/key"
