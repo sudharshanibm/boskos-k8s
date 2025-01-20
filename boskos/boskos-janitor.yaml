@@ -16,20 +16,6 @@ stringData:
   api-key: "8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N"
 ---
 apiVersion: external-secrets.io/v1beta1
-kind: ClusterSecretStore
-metadata:
-  name: secretstore-ibm
-spec:
-  provider:
-    ibm:
-      serviceUrl: "https://4aa82246-ef34-421d-9a17-cd561e99e061.us-south.secrets-manager.appdomain.cloud"
-      auth:
-        secretRef:
-          secretApiKeySecretRef:
-            name: ibmcloud-janitor-secret
-            key: api-key
----
-apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
   name: external-secret-janitor
@@ -43,9 +29,9 @@ spec:
     name: ibmcloud-janitor-secret
     creationPolicy: Owner
   data:
-    - secretKey: api-key
-      remoteRef:
-        key: 4ab84e09-618b-f8cd-5181-fc8f7a214505
+  - secretKey: api-key
+    remoteRef:
+      key: 4ab84e09-618b-f8cd-5181-fc8f7a214505
 ---
 apiVersion: apps/v1
 kind: Deployment
