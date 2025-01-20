@@ -10,6 +10,7 @@ apiVersion: external-secrets.io/v1beta1
 kind: SecretStore
 metadata:
   name: ibmcloud-secrets-store
+  namespace: test-pods
 spec:
   provider:
     ibm:
@@ -28,7 +29,6 @@ metadata:
 type: Opaque
 stringData:
   api-key: "8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N"
-
 ---
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
@@ -44,8 +44,7 @@ spec:
   data:
     - secretKey: api-key
       remoteRef:
-        key: https://4aa82246-ef34-421d-9a17-cd561e99e061.us-south.secrets-manager.appdomain.cloud
-
+        key: "https://4aa82246-ef34-421d-9a17-cd561e99e061.us-south.secrets-manager.appdomain.cloud"
 ---
 apiVersion: apps/v1
 kind: Deployment
