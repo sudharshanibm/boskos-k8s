@@ -44,7 +44,7 @@ spec:
     name: ibmcloud-janitor-secret
     creationPolicy: Owner
   data:
-  - secretKey: api-key
+  - secretKey: key
     remoteRef:
       key: 4ab84e09-618b-f8cd-5181-fc8f7a214505
 ---
