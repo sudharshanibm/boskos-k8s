@@ -13,7 +13,7 @@ metadata:
   namespace: test-pods
 type: Opaque
 stringData:
-  IBMCLOUD_API_KEY: "8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N"
+  IBMCLOUD_API_KEY: ${IBMCLOUD_API_KEY}
 
 ---
 apiVersion: v1
@@ -23,7 +23,7 @@ metadata:
   namespace: test-pods
 type: Opaque
 stringData:
-  key: "8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N"
+  key: ${IBMCLOUD_API_KEY}
 ---
 apiVersion: external-secrets.io/v1beta1
 kind: ClusterSecretStore
