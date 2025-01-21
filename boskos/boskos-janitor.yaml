@@ -9,6 +9,16 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
+  name: ibm-cloud-credentials
+  namespace: test-pods
+type: Opaque
+stringData:
+  IBMCLOUD_API_KEY: "8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
   name: ibmcloud-janitor-secret
   namespace: test-pods
 type: Opaque
