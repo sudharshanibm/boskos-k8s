@@ -23,7 +23,7 @@ metadata:
   namespace: test-pods
 type: Opaque
 stringData:
-  api-key: "8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N"
+  key: "8_4f2ggYLl2C2cgJaZkfy8Nw2LgqMullnB4_3JgUh24N"
 ---
 apiVersion: external-secrets.io/v1beta1
 kind: ClusterSecretStore
@@ -56,7 +56,7 @@ spec:
   data:
   - secretKey: key
     remoteRef:
-      key: 4ab84e09-618b-f8cd-5181-fc8f7a214505
+      key: 25126888-0109-3bcf-9635-7049f215e3f9
 ---
 apiVersion: apps/v1
 kind: Deployment
