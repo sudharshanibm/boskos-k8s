@@ -13,7 +13,7 @@ metadata:
 spec:
   provider:
     ibm:
-      serviceUrl: "https:///456ca933-c50f-470f-a7ee-8a311cad9a68.eu-de.secrets-manager.appdomain.cloud"
+      serviceUrl: "https://456ca933-c50f-470f-a7ee-8a311cad9a68.eu-de.secrets-manager.appdomain.cloud"
       auth:
         secretRef:
           secretApiKeySecretRef:
