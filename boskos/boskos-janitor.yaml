@@ -6,25 +6,6 @@ metadata:
 data:
   boskos-url: "http://boskos.test-pods.svc.cluster.local."
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ibm-cloud-credentials
-  namespace: test-pods
-type: Opaque
-stringData:
-  IBMCLOUD_API_KEY: ${IBMCLOUD_API_KEY}
-
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ibmcloud-janitor-secret
-  namespace: test-pods
-type: Opaque
-stringData:
-  key: ${IBMCLOUD_API_KEY}
----
 apiVersion: external-secrets.io/v1beta1
 kind: ClusterSecretStore
 metadata:
@@ -32,7 +13,7 @@ metadata:
 spec:
   provider:
     ibm:
-      serviceUrl: "https://4aa82246-ef34-421d-9a17-cd561e99e061.us-south.secrets-manager.appdomain.cloud"
+      serviceUrl: "https:///456ca933-c50f-470f-a7ee-8a311cad9a68.eu-de.secrets-manager.appdomain.cloud"
       auth:
         secretRef:
           secretApiKeySecretRef:
@@ -56,7 +37,7 @@ spec:
   data:
   - secretKey: key
     remoteRef:
-      key: 25126888-0109-3bcf-9635-7049f215e3f9
+      key: 7aabd56f-13bd-1111-cc1f-5f62570f4f67
 ---
 apiVersion: apps/v1
 kind: Deployment
