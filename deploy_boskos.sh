@@ -47,17 +47,15 @@ spin='|/-\'
 MAX_RETRIES=30
 i=0
 
-# Wait for resources to be ready
+# Wait for Pods, ClusterSecretStore, and ExternalSecrets to be ready
 while [ $MAX_RETRIES -gt 0 ]; do
     NOT_READY_RESOURCES=()
-    
+
     PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$3 != "Running" && $3 != "Completed" {print $1}')
-    DEPLOYMENTS_NOT_READY=$(kubectl get deployments -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$2 != $3 {print $1}')
     CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -wq 'Valid' || echo "Not Ready")
     EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $5}' | grep -wq 'True' || echo "Not Ready")
 
     [[ -n "$PODS_NOT_READY" ]] && NOT_READY_RESOURCES+=("Pods")
-    [[ -n "$DEPLOYMENTS_NOT_READY" ]] && NOT_READY_RESOURCES+=("Deployments")
     [[ "$CLUSTER_SECRET_READY" == "Not Ready" ]] && NOT_READY_RESOURCES+=("ClusterSecretStore")
     [[ "$EXTERNAL_SECRET_READY" == "Not Ready" ]] && NOT_READY_RESOURCES+=("ExternalSecrets")
 
@@ -77,26 +75,34 @@ if [ ${#NOT_READY_RESOURCES[@]} -ne 0 ]; then
     for res in "${NOT_READY_RESOURCES[@]}"; do
         echo -e "   - \033[1;31m$res\033[0m"
     done
-    echo -e "\n🔹 \033[1;34mCurrent Resource Status:\033[0m"
-    kubectl get pods,deployments,clustersecretstore,externalsecrets -n "$NAMESPACE"
     exit 1
 fi
 
 echo -e "\n✅ \033[1;32mBoskos deployment completed successfully!\033[0m 🚀"
 
-# Fetching deployed resources
-echo -e "\nFetching deployed resources in namespace: $NAMESPACE"
-echo -e "-----------------------------------------------------"
+# Function to display resources in formatted color-coded table
+display_resources() {
+    echo -e "\n🔹 \033[1;34mCurrent Resource Status:\033[0m"
+    echo -e "-----------------------------------------------------"
 
-echo -e "\n🔹 \033[1;34mPods:\033[0m"
-kubectl get pods -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name,:status.phase,:status.containerStatuses[0].restartCount,:metadata.creationTimestamp"
+    echo -e "\n🔸 \033[1;36mPods:\033[0m"
+    kubectl get pods -n "$NAMESPACE" --no-headers | awk '{ if ($3 == "Running") print "\033[1;32m" $0 "\033[0m"; else print "\033[1;31m" $0 "\033[0m" }'
 
-echo -e "\n-----------------------------------------------------"
-echo -e "\n🔹 \033[1;34mClusterSecretStore:\033[0m"
-kubectl get clustersecretstore -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name,:status.status,:status.capabilities,:status.ready"
+    echo -e "\n🔸 \033[1;36mDeployments:\033[0m"
+    kubectl get deployments -n "$NAMESPACE" --no-headers | awk '{ if ($2 == $3) print "\033[1;32m" $0 "\033[0m"; else print "\033[1;31m" $0 "\033[0m" }'
 
-echo -e "\n-----------------------------------------------------"
-echo -e "\n🔹 \033[1;34mExternalSecrets:\033[0m"
-kubectl get externalsecrets -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name,:spec.store,:spec.refreshInterval,:status.status,:status.ready"
+    echo -e "\n🔸 \033[1;36mServices:\033[0m"
+    kubectl get services -n "$NAMESPACE" --no-headers | awk '{ print $0 }'
 
-echo -e "-----------------------------------------------------"
+    echo -e "\n🔸 \033[1;36mReplicaSets:\033[0m"
+    kubectl get replicasets -n "$NAMESPACE" --no-headers | awk '{ print $0 }'
+
+    echo -e "\n🔸 \033[1;36mClusterSecretStore:\033[0m"
+    kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{ if ($4 == "Valid") print "\033[1;32m" $0 "\033[0m"; else print "\033[1;31m" $0 "\033[0m" }'
+
+    echo -e "\n🔸 \033[1;36mExternalSecrets:\033[0m"
+    kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{ if ($5 == "True") print "\033[1;32m" $0 "\033[0m"; else print "\033[1;31m" $0 "\033[0m" }'
+}
+
+# Call the function to display resources
+display_resources
