@@ -1,64 +1,106 @@
 #!/bin/bash
 
-set -e  # Exit on error
-
-# Validate input
-if [ -z "$1" ]; then
-  echo "Usage: $0 <config-name>"
-  exit 1
-fi
+set -e  # Exit script if any command fails
 
 CONFIG_NAME=$1
 NAMESPACE="test-pods"
-CONFIG_FILE="boskos/boskos-configmap.yaml"
+CONFIGMAP_FILE="boskos/boskos-configmap.yaml"
 
-# Ensure namespace exists
-if ! kubectl get namespace "$NAMESPACE" &>/dev/null; then
-  echo "Namespace $NAMESPACE does not exist. Creating..."
-  kubectl create namespace "$NAMESPACE"
-else
-  echo "Namespace $NAMESPACE already exists."
+if [ -z "$CONFIG_NAME" ]; then
+    echo -e "\033[1;31m❌ Error: Config name parameter is required.\033[0m"
+    echo -e "   Usage: ./deploy_boskos.sh <config-name>"
+    exit 1
 fi
 
-# Delete existing Boskos resources
-echo "Deleting existing Boskos resources..."
+echo -e "\n🔹 \033[1;34mChecking if namespace '$NAMESPACE' exists...\033[0m"
+if ! kubectl get namespace "$NAMESPACE" &>/dev/null; then
+    echo -e "🛠️  Namespace '$NAMESPACE' does not exist. Creating..."
+    kubectl create namespace "$NAMESPACE"
+else
+    echo -e "✅ Namespace '$NAMESPACE' already exists."
+fi
+
+echo -e "\n🔹 \033[1;34mDeleting existing Boskos resources...\033[0m"
 kubectl delete -f boskos/ --ignore-not-found=true
 
-# Modify boskos-configmap.yaml to update only the names field
-echo "Updating $CONFIG_FILE with the new config name: $CONFIG_NAME"
+echo -e "\n🔹 \033[1;34mUpdating $CONFIGMAP_FILE with new config name: $CONFIG_NAME\033[0m"
+cat <<EOF > "$CONFIGMAP_FILE"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: resources
+  namespace: $NAMESPACE
+data:
+  boskos-resources.yaml: |
+    resources:
+      - type: "vpc-service"
+        state: free
+        names:
+          - "$CONFIG_NAME"
+EOF
 
-# Use sed to properly replace names under vpc-service
-awk -v name="$CONFIG_NAME" '
-    BEGIN { in_block=0 }
-    /- type: "vpc-service"/ { print; in_block=1; next }
-    in_block && /names:/ { print "        names:\n          - \"" name "\""; in_block=0; next }
-    in_block && /^        -/ { next }  # Remove old names
-    { print }
-' "$CONFIG_FILE" > temp.yaml && mv temp.yaml "$CONFIG_FILE"
-
-# Ensure the names field exists
-if ! grep -q "names:" "$CONFIG_FILE"; then
-  sed -i '/- type: "vpc-service"/a\        names:\n          - "'$CONFIG_NAME'"' "$CONFIG_FILE"
-fi
-
-# Deploy Boskos resources
-echo "Applying Boskos configuration..."
+echo -e "\n🔹 \033[1;34mApplying Boskos configuration...\033[0m"
 kubectl apply -f boskos/
 
-# Wait for resources to be ready
-sleep 10
+echo -e "\n⏳ \033[1;33mWaiting for resources to become ready...\033[0m"
+spin='|/-\'
+i=0
+MAX_RETRIES=10
+SLEEP_TIME=5
 
-# Display deployed resources
-echo "Fetching deployed resources in namespace: $NAMESPACE"
-echo "-----------------------------------------------------"
-echo "🔹 **Pods:**"
-kubectl get all -n "$NAMESPACE"
-echo "-----------------------------------------------------"
-echo "🔹 **ClusterSecretStore:**"
-kubectl get clustersecretstore -n "$NAMESPACE" || echo "No ClusterSecretStore found."
-echo "-----------------------------------------------------"
-echo "🔹 **ExternalSecrets:**"
-kubectl get externalsecrets -n "$NAMESPACE" || echo "No ExternalSecrets found."
-echo "-----------------------------------------------------"
+while [ $MAX_RETRIES -gt 0 ]; do
+    PENDING_RESOURCES=()
+    
+    for resource in pods deployments services replicasets clustersecretstore externalsecrets; do
+        STATUS=$(kubectl get $resource -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $2}' | grep -Ev 'Running|Completed|True' || true)
+        if [ -n "$STATUS" ]; then
+            PENDING_RESOURCES+=("$resource")
+        fi
+    done
 
-echo "✅ Boskos deployment completed successfully!"
+    if [ ${#PENDING_RESOURCES[@]} -eq 0 ]; then
+        echo -e "\n✅ \033[1;32mAll resources are running successfully!\033[0m"
+        break
+    fi
+
+    printf "\r⏳ \033[1;33mWaiting... ${spin:i++%${#spin}:1} (${MAX_RETRIES}s left)\033[0m"
+    sleep $SLEEP_TIME
+    MAX_RETRIES=$((MAX_RETRIES - 1))
+done
+
+if [ ${#PENDING_RESOURCES[@]} -ne 0 ]; then
+    echo -e "\n❌ \033[1;31mDeployment completed with errors.\033[0m"
+    echo -e "The following resources are not fully running:"
+    for res in "${PENDING_RESOURCES[@]}"; do
+        echo -e "   - \033[1;31m$res\033[0m"
+    done
+    exit 1
+fi
+
+echo -e "\n🔹 \033[1;34mFetching all resources in namespace: $NAMESPACE\033[0m"
+echo -e "\n\033[1;36m-----------------------------------------------------\033[0m"
+echo -e "🔹 \033[1;35mPODS:\033[0m"
+kubectl get pods -n "$NAMESPACE"
+echo -e "\033[1;36m-----------------------------------------------------\033[0m"
+
+echo -e "🔹 \033[1;35mDEPLOYMENTS:\033[0m"
+kubectl get deployments -n "$NAMESPACE"
+echo -e "\033[1;36m-----------------------------------------------------\033[0m"
+
+echo -e "🔹 \033[1;35mSERVICES:\033[0m"
+kubectl get services -n "$NAMESPACE"
+echo -e "\033[1;36m-----------------------------------------------------\033[0m"
+
+echo -e "🔹 \033[1;35mREPLICA SETS:\033[0m"
+kubectl get replicasets -n "$NAMESPACE"
+echo -e "\033[1;36m-----------------------------------------------------\033[0m"
+
+echo -e "🔹 \033[1;35mCLUSTER SECRET STORE:\033[0m"
+kubectl get clustersecretstore -n "$NAMESPACE"
+echo -e "\033[1;36m-----------------------------------------------------\033[0m"
+
+echo -e "🔹 \033[1;35mEXTERNAL SECRETS:\033[0m"
+kubectl get externalsecrets -n "$NAMESPACE"
+echo -e "\033[1;36m-----------------------------------------------------\033[0m"
+
+echo -e "\n✅ \033[1;32mBoskos deployment completed successfully!\033[0m 🚀"
