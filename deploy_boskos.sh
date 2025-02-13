@@ -88,19 +88,20 @@ echo -e "\n🔹 \033[1;34mResource Status:\033[0m"
 if [ ${#NOT_READY_RESOURCES[@]} -gt 0 ]; then
     echo -e "\033[1;31mDeployment completed with errors.\033[0m"
     echo -e "The following resources are not fully running:"
-    printf "Resource\t\tStatus\n"
-    printf "--------------------------------\n"
+    printf "%-25s %-10s\n" "Resource" "Status"
+    printf "%-25s %-10s\n" "---------------------------------" "----------"
     for res in "${NOT_READY_RESOURCES[@]}"; do
-        printf "\033[1;31m$res\t\tNot Ready\033[0m\n"
+        printf "\033[1;31m%-25s %-10s\033[0m\n" "$res" "Not Ready"
     done
     exit 1
 else
     echo -e "\033[1;32mAll resources are running successfully!\033[0m"
-    printf "Resource\t\tStatus\n"
-    printf "--------------------------------\n"
-    printf "\033[1;32mPods\t\tRunning\033[0m\n"
-    printf "\033[1;32mClusterSecretStore\tValid\033[0m\n"
-    printf "\033[1;32mExternalSecrets\t\tSynced\033[0m\n"
+    printf "%-25s %-10s\n" "Resource" "Status"
+    printf "%-25s %-10s\n" "---------------------------------" "----------"
+    printf "\033[1;32m%-25s %-10s\033[0m\n" "Pods" "Running"
+    printf "\033[1;32m%-25s %-10s\033[0m\n" "ClusterSecretStore" "Valid"
+    printf "\033[1;32m%-25s %-10s\033[0m\n" "ExternalSecrets" "Synced"
 fi
+
 
 kubectl get pods,clustersecretstore,externalsecrets -n "$NAMESPACE" --no-headers | column -t
