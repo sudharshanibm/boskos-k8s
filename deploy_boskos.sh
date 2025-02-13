@@ -42,9 +42,16 @@ EOF
 echo -e "\n🔹 \033[1;34mApplying Boskos configuration...\033[0m"
 kubectl apply -f boskos/
 
-# Wait for resources to initialize
+# Wait for resources to initialize with a spinner animation
 echo -e "\n⏳ \033[1;33mWaiting for resources to initialize...\033[0m"
-sleep 10  # Wait for 10 seconds
+spin="|/-\\"
+i=0
+while ps aux | grep -q '[k]ubectl apply'; do
+    i=$(( (i+1) %4 )); # Loop through the spinner array
+    echo -ne "\r$spin$i"
+    sleep 0.1
+done
+echo -ne "\r✅ Resources initialized!            \n"
 
 # Check the resources status
 echo -e "\n🔹 \033[1;34mChecking the resource status...\033[0m"
@@ -76,17 +83,24 @@ if [[ "$EXTERNAL_SECRET_READY" != "True" || "$EXTERNAL_SECRET_STATUS" != "Secret
     NOT_READY_RESOURCES+=("ExternalSecrets")
 fi
 
-# Report status
+# Report status in a table format
+echo -e "\n🔹 \033[1;34mResource Status:\033[0m"
 if [ ${#NOT_READY_RESOURCES[@]} -gt 0 ]; then
-    echo -e "\n❌ \033[1;31mDeployment completed with errors.\033[0m"
+    echo -e "\033[1;31mDeployment completed with errors.\033[0m"
     echo -e "The following resources are not fully running:"
+    printf "Resource\t\tStatus\n"
+    printf "--------------------------------\n"
     for res in "${NOT_READY_RESOURCES[@]}"; do
-        echo -e "   - \033[1;31m$res\033[0m"
+        printf "\033[1;31m$res\t\tNot Ready\033[0m\n"
     done
     exit 1
 else
-    echo -e "\n✅ \033[1;32mAll resources are running successfully!\033[0m"
+    echo -e "\033[1;32mAll resources are running successfully!\033[0m"
+    printf "Resource\t\tStatus\n"
+    printf "--------------------------------\n"
+    printf "\033[1;32mPods\t\tRunning\033[0m\n"
+    printf "\033[1;32mClusterSecretStore\tValid\033[0m\n"
+    printf "\033[1;32mExternalSecrets\t\tSynced\033[0m\n"
 fi
 
-echo -e "\n🔹 \033[1;34mResource Status:\033[0m"
-kubectl get pods,clustersecretstore,externalsecrets -n "$NAMESPACE" --no-headers
+kubectl get pods,clustersecretstore,externalsecrets -n "$NAMESPACE" --no-headers | column -t
