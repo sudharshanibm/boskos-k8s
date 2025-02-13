@@ -42,89 +42,51 @@ EOF
 echo -e "\n🔹 \033[1;34mApplying Boskos configuration...\033[0m"
 kubectl apply -f boskos/
 
-echo -e "\n⏳ \033[1;33mWaiting for resources to become ready...\033[0m"
-spin='|/-\'
-MAX_RETRIES=30
-i=0
+# Wait for resources to initialize
+echo -e "\n⏳ \033[1;33mWaiting for resources to initialize...\033[0m"
+sleep 10  # Wait for 10 seconds
 
-# Wait for Pods, ClusterSecretStore, and ExternalSecrets to be ready
-while [ $MAX_RETRIES -gt 0 ]; do
-    NOT_READY_RESOURCES=()
+# Check the resources status
+echo -e "\n🔹 \033[1;34mChecking the resource status...\033[0m"
 
-    # Check if any pods are not ready
-    PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$3 != "Running" && $3 != "Completed" {print $1}')
+# Check Pods status
+PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers | awk '$3 != "Running" && $3 != "Completed" {print $1}')
 
-    # Check ClusterSecretStore readiness by directly checking the 'READY' column value
-    CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $4}')
-    
-    # Check ExternalSecrets readiness
-    EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{print $5}' | grep -wq 'True' && echo "Ready" || echo "Not Ready")
+# Check ClusterSecretStore status
+CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $4}')
+CLUSTER_SECRET_STATUS=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $3}')
 
-    echo -e "ClusterSecretStore Status: $CLUSTER_SECRET_READY"  # Added for debugging
+# Check ExternalSecrets status
+EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{print $5}')
+EXTERNAL_SECRET_STATUS=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{print $4}')
 
-    if [[ -n "$PODS_NOT_READY" || "$CLUSTER_SECRET_READY" != "True" || "$EXTERNAL_SECRET_READY" == "Not Ready" ]]; then
-        if [[ "$CLUSTER_SECRET_READY" == "True" ]]; then
-            echo -e "\033[1;32m✅ ClusterSecretStore is ready.\033[0m"
-        else
-            NOT_READY_RESOURCES+=("ClusterSecretStore")
-        fi
+# Set a flag for errors
+NOT_READY_RESOURCES=()
 
-        if [[ "$EXTERNAL_SECRET_READY" == "Ready" ]]; then
-            echo -e "\033[1;32m✅ ExternalSecrets is synced.\033[0m"
-        else
-            NOT_READY_RESOURCES+=("ExternalSecrets")
-        fi
+# Check readiness
+if [[ -n "$PODS_NOT_READY" ]]; then
+    NOT_READY_RESOURCES+=("Pods")
+fi
 
-        if [ -n "$PODS_NOT_READY" ]; then
-            echo -e "\033[1;33m⚠️  Some Pods are not ready yet...\033[0m"
-            NOT_READY_RESOURCES+=("Pods")
-        fi
+if [[ "$CLUSTER_SECRET_READY" != "True" || "$CLUSTER_SECRET_STATUS" != "Valid" ]]; then
+    NOT_READY_RESOURCES+=("ClusterSecretStore")
+fi
 
-        if [ ${#NOT_READY_RESOURCES[@]} -gt 0 ]; then
-            printf "\r⏳ \033[1;33mWaiting... ${spin:i++%${#spin}:1} (${MAX_RETRIES}s left)\033[0m"
-            sleep 3
-            MAX_RETRIES=$((MAX_RETRIES - 1))
-        fi
-    else
-        echo -e "\n✅ \033[1;32mAll resources are running successfully!\033[0m"
-        break
-    fi
-done
+if [[ "$EXTERNAL_SECRET_READY" != "True" || "$EXTERNAL_SECRET_STATUS" != "SecretSynced" ]]; then
+    NOT_READY_RESOURCES+=("ExternalSecrets")
+fi
 
-if [ ${#NOT_READY_RESOURCES[@]} -ne 0 ]; then
+# Report status
+if [ ${#NOT_READY_RESOURCES[@]} -gt 0 ]; then
     echo -e "\n❌ \033[1;31mDeployment completed with errors.\033[0m"
     echo -e "The following resources are not fully running:"
     for res in "${NOT_READY_RESOURCES[@]}"; do
         echo -e "   - \033[1;31m$res\033[0m"
     done
     exit 1
+else
+    echo -e "\n✅ \033[1;32mAll resources are running successfully!\033[0m"
 fi
 
-echo -e "\n✅ \033[1;32mBoskos deployment completed successfully!\033[0m 🚀"
-
-# Function to display resources in formatted color-coded table
-display_resources() {
-    echo -e "\n🔹 \033[1;34mCurrent Resource Status:\033[0m"
-    echo -e "-----------------------------------------------------"
-
-    echo -e "\n🔸 \033[1;36mPods:\033[0m"
-    kubectl get pods -n "$NAMESPACE" --no-headers | awk '{ if ($3 == "Running") print "\033[1;32m" $0 "\033[0m"; else print "\033[1;31m" $0 "\033[0m" }'
-
-    echo -e "\n🔸 \033[1;36mDeployments:\033[0m"
-    kubectl get deployments -n "$NAMESPACE" --no-headers | awk '{ if ($2 == $3) print "\033[1;32m" $0 "\033[0m"; else print "\033[1;31m" $0 "\033[0m" }'
-
-    echo -e "\n🔸 \033[1;36mServices:\033[0m"
-    kubectl get services -n "$NAMESPACE" --no-headers | awk '{ print $0 }'
-
-    echo -e "\n🔸 \033[1;36mReplicaSets:\033[0m"
-    kubectl get replicasets -n "$NAMESPACE" --no-headers | awk '{ print $0 }'
-
-    echo -e "\n🔸 \033[1;36mClusterSecretStore:\033[0m"
-    kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{ if ($4 == "Valid") print "\033[1;32m" $0 "\033[0m"; else print "\033[1;31m" $0 "\033[0m" }'
-
-    echo -e "\n🔸 \033[1;36mExternalSecrets:\033[0m"
-    kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{ if ($5 == "True") print "\033[1;32m" $0 "\033[0m"; else print "\033[1;31m" $0 "\033[0m" }'
-}
-
-# Call the function to display resources
-display_resources
+echo -e "\n🔹 \033[1;34mResource Status:\033[0m"
+kubectl get pods,clustersecretstore,externalsecrets -n "$NAMESPACE" --no-headers
