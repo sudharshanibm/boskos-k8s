@@ -13,7 +13,7 @@ metadata:
 spec:
   provider:
     ibm:
-      serviceUrl: "https://456ca933-c50f-470f-a7ee-8a311cad9a68.eu-de.secrets-manager.appdomain.cloud"
+      serviceUrl: "https://bcc32de5-df5b-467a-b1f7-87d058e6044d.eu-de.secrets-manager.appdomain.cloud"
       auth:
         secretRef:
           secretApiKeySecretRef:
@@ -37,7 +37,7 @@ spec:
   data:
   - secretKey: key
     remoteRef:
-      key: 7aabd56f-13bd-1111-cc1f-5f62570f4f67
+      key: 7838e4f2-1cee-8ae3-062f-257e0f4b2471
 ---
 apiVersion: apps/v1
 kind: Deployment
