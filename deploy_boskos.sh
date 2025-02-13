@@ -45,23 +45,16 @@ kubectl apply -f boskos/
 echo -e "\n⏳ \033[1;33mWaiting for resources to become ready...\033[0m"
 spin='|/-\'
 MAX_RETRIES=10
-SLEEP_TIME=10
+SLEEP_TIME=5
 i=0
 
 while [ $MAX_RETRIES -gt 0 ]; do
-    NOT_READY_RESOURCES=()
-    
     PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$3 != "Running" && $3 != "Completed" {print $1}')
     DEPLOYMENTS_NOT_READY=$(kubectl get deployments -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$2 != $3 {print $1}')
     CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -wq 'True' || echo "Not Ready")
     EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $5}' | grep -wq 'True' || echo "Not Ready")
 
-    [[ -n "$PODS_NOT_READY" ]] && NOT_READY_RESOURCES+=("Pods")
-    [[ -n "$DEPLOYMENTS_NOT_READY" ]] && NOT_READY_RESOURCES+=("Deployments")
-    [[ "$CLUSTER_SECRET_READY" == "Not Ready" ]] && NOT_READY_RESOURCES+=("ClusterSecretStore")
-    [[ "$EXTERNAL_SECRET_READY" == "Not Ready" ]] && NOT_READY_RESOURCES+=("ExternalSecrets")
-
-    if [ ${#NOT_READY_RESOURCES[@]} -eq 0 ]; then
+    if [ -z "$PODS_NOT_READY" ] && [ -z "$DEPLOYMENTS_NOT_READY" ] && [ "$CLUSTER_SECRET_READY" == "True" ] && [ "$EXTERNAL_SECRET_READY" == "True" ]; then
         echo -e "\n✅ \033[1;32mAll resources are running successfully!\033[0m"
         break
     fi
@@ -71,20 +64,20 @@ while [ $MAX_RETRIES -gt 0 ]; do
     MAX_RETRIES=$((MAX_RETRIES - 1))
 done
 
-if [ ${#NOT_READY_RESOURCES[@]} -ne 0 ]; then
+if [ $MAX_RETRIES -eq 0 ]; then
     echo -e "\n❌ \033[1;31mDeployment completed with errors.\033[0m"
     echo -e "The following resources are not fully running:"
-    for res in "${NOT_READY_RESOURCES[@]}"; do
-        echo -e "   - \033[1;31m$res\033[0m"
-    done
+    [ -n "$PODS_NOT_READY" ] && echo -e "   - \033[1;31mPods\033[0m"
+    [ -n "$DEPLOYMENTS_NOT_READY" ] && echo -e "   - \033[1;31mDeployments\033[0m"
+    [ "$CLUSTER_SECRET_READY" == "Not Ready" ] && echo -e "   - \033[1;31mClusterSecretStore\033[0m"
+    [ "$EXTERNAL_SECRET_READY" == "Not Ready" ] && echo -e "   - \033[1;31mExternalSecrets\033[0m"
+    
     echo -e "\n🔹 \033[1;34mCurrent Resource Status:\033[0m"
-    kubectl get pods,deployments,clustersecretstore,externalsecrets -n "$NAMESPACE" | \
+    kubectl get all,clustersecretstore,externalsecrets -n "$NAMESPACE" | \
     column -t | \
     awk '{print "  -", $0}'
     exit 1
 fi
-
-echo -e "\n✅ \033[1;32mBoskos deployment completed successfully!\033[0m 🚀"
 
 # Fetching and displaying deployed resources in a neatly formatted way
 echo -e "\nFetching deployed resources in namespace: $NAMESPACE"
