@@ -53,20 +53,20 @@ while [ $MAX_RETRIES -gt 0 ]; do
 
     PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$3 != "Running" && $3 != "Completed" {print $1}')
     
-    # Updated check for ClusterSecretStore readiness
+    # Corrected check for ClusterSecretStore readiness
     CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{if ($4 == "True") print "Ready"; else print "Not Ready"}')
     EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $5}' | grep -wq 'True' || echo "Not Ready")
 
     echo -e "ClusterSecretStore Status: $CLUSTER_SECRET_READY"  # Added for debugging
 
     if [[ -n "$PODS_NOT_READY" || "$CLUSTER_SECRET_READY" == "Not Ready" || "$EXTERNAL_SECRET_READY" == "Not Ready" ]]; then
-        if [ "$CLUSTER_SECRET_READY" != "Not Ready" ]; then
+        if [[ "$CLUSTER_SECRET_READY" == "Ready" ]]; then
             echo -e "\033[1;32m✅ ClusterSecretStore is ready.\033[0m"
         else
             NOT_READY_RESOURCES+=("ClusterSecretStore")
         fi
 
-        if [ "$EXTERNAL_SECRET_READY" != "Not Ready" ]; then
+        if [[ "$EXTERNAL_SECRET_READY" == "True" ]]; then
             echo -e "\033[1;32m✅ ExternalSecrets is synced.\033[0m"
         else
             NOT_READY_RESOURCES+=("ExternalSecrets")
