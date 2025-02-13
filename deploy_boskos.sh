@@ -1,13 +1,13 @@
 #!/bin/bash
 
-set -e  # Exit script if any command fails
+set -e  # Exit on error
 
 CONFIG_NAME=$1
 NAMESPACE="test-pods"
 CONFIGMAP_FILE="boskos/boskos-configmap.yaml"
 
 if [ -z "$CONFIG_NAME" ]; then
-    echo -e "\033[1;31m❌ Error: Config name parameter is required.\033[0m"
+    echo -e "\033[1;31m❌ Error: Config name is required.\033[0m"
     echo -e "   Usage: ./deploy_boskos.sh <config-name>"
     exit 1
 fi
@@ -51,15 +51,15 @@ i=0
 while [ $MAX_RETRIES -gt 0 ]; do
     NOT_READY_RESOURCES=()
     
-    PODS_STATUS=$(kubectl get pods -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $3}' | grep -Ev 'Running|Completed' || true)
-    DEPLOYMENTS_STATUS=$(kubectl get deployments -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $2}' | grep -Ev '1/1|2/2|True' || true)
-    CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -v 'True' || true)
-    EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $5}' | grep -v 'True' || true)
+    PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$3 != "Running" && $3 != "Completed" {print $1}')
+    DEPLOYMENTS_NOT_READY=$(kubectl get deployments -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$2 != $3 {print $1}')
+    CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -wq 'True' || echo "Not Ready")
+    EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $5}' | grep -wq 'True' || echo "Not Ready")
 
-    [[ -n "$PODS_STATUS" ]] && NOT_READY_RESOURCES+=("Pods")
-    [[ -n "$DEPLOYMENTS_STATUS" ]] && NOT_READY_RESOURCES+=("Deployments")
-    [[ -n "$CLUSTER_SECRET_READY" ]] && NOT_READY_RESOURCES+=("ClusterSecretStore")
-    [[ -n "$EXTERNAL_SECRET_READY" ]] && NOT_READY_RESOURCES+=("ExternalSecrets")
+    [[ -n "$PODS_NOT_READY" ]] && NOT_READY_RESOURCES+=("Pods")
+    [[ -n "$DEPLOYMENTS_NOT_READY" ]] && NOT_READY_RESOURCES+=("Deployments")
+    [[ "$CLUSTER_SECRET_READY" == "Not Ready" ]] && NOT_READY_RESOURCES+=("ClusterSecretStore")
+    [[ "$EXTERNAL_SECRET_READY" == "Not Ready" ]] && NOT_READY_RESOURCES+=("ExternalSecrets")
 
     if [ ${#NOT_READY_RESOURCES[@]} -eq 0 ]; then
         echo -e "\n✅ \033[1;32mAll resources are running successfully!\033[0m"
@@ -77,33 +77,45 @@ if [ ${#NOT_READY_RESOURCES[@]} -ne 0 ]; then
     for res in "${NOT_READY_RESOURCES[@]}"; do
         echo -e "   - \033[1;31m$res\033[0m"
     done
+    echo -e "\n🔹 \033[1;34mCurrent Resource Status:\033[0m"
+    kubectl get pods,deployments,clustersecretstore,externalsecrets -n "$NAMESPACE" | \
+    column -t | \
+    awk '{print "  -", $0}'
     exit 1
 fi
 
-echo -e "\n🔹 \033[1;34mFetching all resources in namespace: $NAMESPACE\033[0m"
-echo -e "\n\033[1;36m-----------------------------------------------------\033[0m"
-echo -e "🔹 \033[1;35mPODS:\033[0m"
-kubectl get pods -n "$NAMESPACE"
-echo -e "\033[1;36m-----------------------------------------------------\033[0m"
-
-echo -e "🔹 \033[1;35mDEPLOYMENTS:\033[0m"
-kubectl get deployments -n "$NAMESPACE"
-echo -e "\033[1;36m-----------------------------------------------------\033[0m"
-
-echo -e "🔹 \033[1;35mSERVICES:\033[0m"
-kubectl get services -n "$NAMESPACE"
-echo -e "\033[1;36m-----------------------------------------------------\033[0m"
-
-echo -e "🔹 \033[1;35mREPLICA SETS:\033[0m"
-kubectl get replicasets -n "$NAMESPACE"
-echo -e "\033[1;36m-----------------------------------------------------\033[0m"
-
-echo -e "🔹 \033[1;35mCLUSTER SECRET STORE:\033[0m"
-kubectl get clustersecretstore -n "$NAMESPACE"
-echo -e "\033[1;36m-----------------------------------------------------\033[0m"
-
-echo -e "🔹 \033[1;35mEXTERNAL SECRETS:\033[0m"
-kubectl get externalsecrets -n "$NAMESPACE"
-echo -e "\033[1;36m-----------------------------------------------------\033[0m"
-
 echo -e "\n✅ \033[1;32mBoskos deployment completed successfully!\033[0m 🚀"
+
+# Fetching and displaying deployed resources in a neatly formatted way
+echo -e "\nFetching deployed resources in namespace: $NAMESPACE"
+echo "-----------------------------------------------------"
+
+# Pods
+echo -e "\n🔹 **Pods:**"
+kubectl get pods -n "$NAMESPACE" --no-headers | column -t | awk '{print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5}'
+echo -e "-----------------------------------------------------"
+
+# Deployments
+echo -e "\n🔹 **Deployments:**"
+kubectl get deployments -n "$NAMESPACE" --no-headers | column -t | awk '{print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5}'
+echo -e "-----------------------------------------------------"
+
+# Services
+echo -e "\n🔹 **Services:**"
+kubectl get services -n "$NAMESPACE" --no-headers | column -t | awk '{print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5}'
+echo -e "-----------------------------------------------------"
+
+# ReplicaSets
+echo -e "\n🔹 **ReplicaSets:**"
+kubectl get replicasets -n "$NAMESPACE" --no-headers | column -t | awk '{print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5}'
+echo -e "-----------------------------------------------------"
+
+# ClusterSecretStore
+echo -e "\n🔹 **ClusterSecretStore:**"
+kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | column -t | awk '{print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5}'
+echo -e "-----------------------------------------------------"
+
+# ExternalSecrets
+echo -e "\n🔹 **ExternalSecrets:**"
+kubectl get externalsecrets -n "$NAMESPACE" --no-headers | column -t | awk '{print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5}'
+echo "-----------------------------------------------------"
