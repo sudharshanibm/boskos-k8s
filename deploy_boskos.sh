@@ -53,7 +53,7 @@ while [ $MAX_RETRIES -gt 0 ]; do
     
     PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$3 != "Running" && $3 != "Completed" {print $1}')
     DEPLOYMENTS_NOT_READY=$(kubectl get deployments -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$2 != $3 {print $1}')
-    CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -wq 'True' || echo "Not Ready")
+    CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -wq 'Valid' || echo "Not Ready")
     EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $5}' | grep -wq 'True' || echo "Not Ready")
 
     [[ -n "$PODS_NOT_READY" ]] && NOT_READY_RESOURCES+=("Pods")
