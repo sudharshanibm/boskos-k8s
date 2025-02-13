@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e  # Exit on error
+
 # Function to check if resources are ready
 check_resources_ready() {
     # Check deployment status (looking for 1/1 replicas)
@@ -69,12 +71,22 @@ kubectl delete clusterrole boskos &>/dev/null
 kubectl delete serviceaccount boskos &>/dev/null
 kubectl delete clusterrolebinding boskos &>/dev/null
 
-# Step 3: Apply Boskos resources
-echo "🔹 Applying Boskos configuration..."
-kubectl apply -f boskos-configmap.yaml -n test-pods
-kubectl apply -f boskos-deployment.yaml -n test-pods
+# Step 3: Update the ConfigMap with the new CONFIG_NAME
+CONFIG_NAME=$1  # Assuming the config name is passed as the first argument
+if [ -z "$CONFIG_NAME" ]; then
+    echo "❌ Error: Config name is required."
+    echo "Usage: ./deploy_boskos.sh <config-name>"
+    exit 1
+fi
 
-# Step 4: Wait for resources to become ready
+echo "🔹 Updating ConfigMap with new config name: $CONFIG_NAME"
+kubectl create configmap resources -n test-pods --from-literal=boskos-resources="resources:\n  - type: \"vpc-service\"\n    state: free\n    names:\n      - \"$CONFIG_NAME\"" --dry-run=client -o yaml | kubectl apply -f -
+
+# Step 4: Apply Boskos resources
+echo "🔹 Applying Boskos configuration..."
+kubectl apply -f boskos/.
+
+# Step 5: Wait for resources to become ready
 echo "⏳ Waiting for resources to become ready..."
 while true; do
     check_resources_ready
@@ -87,5 +99,5 @@ while true; do
     fi
 done
 
-# Step 5: Output current resource status in formatted table
+# Step 6: Output current resource status in formatted table
 print_resource_status
