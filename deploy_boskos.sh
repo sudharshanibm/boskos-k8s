@@ -52,7 +52,7 @@ sleep 5
 echo "Fetching deployed resources in namespace: $NAMESPACE"
 echo "-----------------------------------------------------"
 echo "🔹 **Pods:**"
-kubectl get pods -n "$NAMESPACE"
+kubectl get all -n "$NAMESPACE"
 echo "-----------------------------------------------------"
 echo "🔹 **ClusterSecretStore:**"
 kubectl get clustersecretstore -n "$NAMESPACE" || echo "No ClusterSecretStore found."
