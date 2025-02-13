@@ -44,22 +44,22 @@ kubectl apply -f boskos/
 
 echo -e "\n⏳ \033[1;33mWaiting for resources to become ready...\033[0m"
 spin='|/-\'
-i=0
 MAX_RETRIES=10
 SLEEP_TIME=5
+i=0
 
 while [ $MAX_RETRIES -gt 0 ]; do
     NOT_READY_RESOURCES=()
     
     PODS_STATUS=$(kubectl get pods -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $3}' | grep -Ev 'Running|Completed' || true)
     DEPLOYMENTS_STATUS=$(kubectl get deployments -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $2}' | grep -Ev '1/1|2/2|True' || true)
-    CLUSTER_SECRET_STATUS=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -v 'True' || true)
-    EXTERNAL_SECRET_STATUS=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -v 'SecretSynced' || true)
+    CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -v 'True' || true)
+    EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $5}' | grep -v 'True' || true)
 
     [[ -n "$PODS_STATUS" ]] && NOT_READY_RESOURCES+=("Pods")
     [[ -n "$DEPLOYMENTS_STATUS" ]] && NOT_READY_RESOURCES+=("Deployments")
-    [[ -n "$CLUSTER_SECRET_STATUS" ]] && NOT_READY_RESOURCES+=("ClusterSecretStore")
-    [[ -n "$EXTERNAL_SECRET_STATUS" ]] && NOT_READY_RESOURCES+=("ExternalSecrets")
+    [[ -n "$CLUSTER_SECRET_READY" ]] && NOT_READY_RESOURCES+=("ClusterSecretStore")
+    [[ -n "$EXTERNAL_SECRET_READY" ]] && NOT_READY_RESOURCES+=("ExternalSecrets")
 
     if [ ${#NOT_READY_RESOURCES[@]} -eq 0 ]; then
         echo -e "\n✅ \033[1;32mAll resources are running successfully!\033[0m"
