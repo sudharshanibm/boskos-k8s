@@ -55,18 +55,33 @@ while [ $MAX_RETRIES -gt 0 ]; do
     CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -wq 'Valid' || echo "Not Ready")
     EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $5}' | grep -wq 'True' || echo "Not Ready")
 
-    [[ -n "$PODS_NOT_READY" ]] && NOT_READY_RESOURCES+=("Pods")
-    [[ "$CLUSTER_SECRET_READY" == "Not Ready" ]] && NOT_READY_RESOURCES+=("ClusterSecretStore")
-    [[ "$EXTERNAL_SECRET_READY" == "Not Ready" ]] && NOT_READY_RESOURCES+=("ExternalSecrets")
+    if [[ -n "$PODS_NOT_READY" || "$CLUSTER_SECRET_READY" == "Not Ready" || "$EXTERNAL_SECRET_READY" == "Not Ready" ]]; then
+        if [ "$CLUSTER_SECRET_READY" != "Not Ready" ]; then
+            echo -e "\033[1;32m✅ ClusterSecretStore is ready.\033[0m"
+        else
+            NOT_READY_RESOURCES+=("ClusterSecretStore")
+        fi
 
-    if [ ${#NOT_READY_RESOURCES[@]} -eq 0 ]; then
+        if [ "$EXTERNAL_SECRET_READY" != "Not Ready" ]; then
+            echo -e "\033[1;32m✅ ExternalSecrets is synced.\033[0m"
+        else
+            NOT_READY_RESOURCES+=("ExternalSecrets")
+        fi
+
+        if [ -n "$PODS_NOT_READY" ]; then
+            echo -e "\033[1;33m⚠️  Some Pods are not ready yet...\033[0m"
+            NOT_READY_RESOURCES+=("Pods")
+        fi
+
+        if [ ${#NOT_READY_RESOURCES[@]} -gt 0 ]; then
+            printf "\r⏳ \033[1;33mWaiting... ${spin:i++%${#spin}:1} (${MAX_RETRIES}s left)\033[0m"
+            sleep 3
+            MAX_RETRIES=$((MAX_RETRIES - 1))
+        fi
+    else
         echo -e "\n✅ \033[1;32mAll resources are running successfully!\033[0m"
         break
     fi
-
-    printf "\r⏳ \033[1;33mWaiting... ${spin:i++%${#spin}:1} (${MAX_RETRIES}s left)\033[0m"
-    sleep 3
-    MAX_RETRIES=$((MAX_RETRIES - 1))
 done
 
 if [ ${#NOT_READY_RESOURCES[@]} -ne 0 ]; then
