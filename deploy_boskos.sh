@@ -44,9 +44,10 @@ kubectl apply -f boskos/
 
 echo -e "\n⏳ \033[1;33mWaiting for resources to become ready...\033[0m"
 spin='|/-\'
-MAX_RETRIES=10
+MAX_RETRIES=30
 i=0
 
+# Wait for resources to be ready
 while [ $MAX_RETRIES -gt 0 ]; do
     NOT_READY_RESOURCES=()
     
@@ -66,7 +67,7 @@ while [ $MAX_RETRIES -gt 0 ]; do
     fi
 
     printf "\r⏳ \033[1;33mWaiting... ${spin:i++%${#spin}:1} (${MAX_RETRIES}s left)\033[0m"
-    sleep 5
+    sleep 3
     MAX_RETRIES=$((MAX_RETRIES - 1))
 done
 
