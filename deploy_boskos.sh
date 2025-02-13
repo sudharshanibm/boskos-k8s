@@ -49,16 +49,19 @@ MAX_RETRIES=10
 SLEEP_TIME=5
 
 while [ $MAX_RETRIES -gt 0 ]; do
-    PENDING_RESOURCES=()
+    NOT_READY_RESOURCES=()
     
-    for resource in pods deployments services replicasets clustersecretstore externalsecrets; do
-        STATUS=$(kubectl get $resource -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $2}' | grep -Ev 'Running|Completed|True' || true)
-        if [ -n "$STATUS" ]; then
-            PENDING_RESOURCES+=("$resource")
-        fi
-    done
+    PODS_STATUS=$(kubectl get pods -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $3}' | grep -Ev 'Running|Completed' || true)
+    DEPLOYMENTS_STATUS=$(kubectl get deployments -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $2}' | grep -Ev '1/1|2/2|True' || true)
+    CLUSTER_SECRET_STATUS=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -v 'True' || true)
+    EXTERNAL_SECRET_STATUS=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -v 'SecretSynced' || true)
 
-    if [ ${#PENDING_RESOURCES[@]} -eq 0 ]; then
+    [[ -n "$PODS_STATUS" ]] && NOT_READY_RESOURCES+=("Pods")
+    [[ -n "$DEPLOYMENTS_STATUS" ]] && NOT_READY_RESOURCES+=("Deployments")
+    [[ -n "$CLUSTER_SECRET_STATUS" ]] && NOT_READY_RESOURCES+=("ClusterSecretStore")
+    [[ -n "$EXTERNAL_SECRET_STATUS" ]] && NOT_READY_RESOURCES+=("ExternalSecrets")
+
+    if [ ${#NOT_READY_RESOURCES[@]} -eq 0 ]; then
         echo -e "\n✅ \033[1;32mAll resources are running successfully!\033[0m"
         break
     fi
@@ -68,10 +71,10 @@ while [ $MAX_RETRIES -gt 0 ]; do
     MAX_RETRIES=$((MAX_RETRIES - 1))
 done
 
-if [ ${#PENDING_RESOURCES[@]} -ne 0 ]; then
+if [ ${#NOT_READY_RESOURCES[@]} -ne 0 ]; then
     echo -e "\n❌ \033[1;31mDeployment completed with errors.\033[0m"
     echo -e "The following resources are not fully running:"
-    for res in "${PENDING_RESOURCES[@]}"; do
+    for res in "${NOT_READY_RESOURCES[@]}"; do
         echo -e "   - \033[1;31m$res\033[0m"
     done
     exit 1
