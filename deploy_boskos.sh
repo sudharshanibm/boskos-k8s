@@ -46,7 +46,7 @@ echo "Applying Boskos configuration..."
 kubectl apply -f boskos/
 
 # Wait for resources to be ready
-sleep 5
+sleep 10
 
 # Display deployed resources
 echo "Fetching deployed resources in namespace: $NAMESPACE"
