@@ -50,10 +50,10 @@ sleep 10  # Wait for 10 seconds
 echo -e "\n🔹 \033[1;34mChecking the resource status...\033[0m"
 
 # Check Pods status
-PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers | awk '$3 != "Running" && $3 != "Completed" {print $1}')
+PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers | awk '$3 != "Running" {print $1}')
 
 # Check ClusterSecretStore status
-CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $4}')
+CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $5}')
 CLUSTER_SECRET_STATUS=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $3}')
 
 # Check ExternalSecrets status
