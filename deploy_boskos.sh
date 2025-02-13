@@ -2,102 +2,100 @@
 
 set -e  # Exit on error
 
-# Function to check if resources are ready
-check_resources_ready() {
-    # Check deployment status (looking for 1/1 replicas)
-    deployments=$(kubectl get deployments -n test-pods --no-headers)
-    not_ready_deployments=$(echo "$deployments" | grep -v "1/1" | wc -l)
+CONFIG_NAME=$1
+NAMESPACE="test-pods"
+CONFIGMAP_FILE="boskos/boskos-configmap.yaml"
 
-    # Check if ClusterSecretStore is ready
-    clustersecretstore_status=$(kubectl get clustersecretstore -n test-pods -o custom-columns=":status.ready" | grep -v "True" | wc -l)
-
-    # If there are any resources not ready, return 1 (false)
-    if [ "$not_ready_deployments" -gt 0 ] || [ "$clustersecretstore_status" -gt 0 ]; then
-        return 1
-    else
-        return 0
-    fi
-}
-
-# Function to print the table format for the resource status
-print_resource_status() {
-    echo "🔹 Current Resource Status:"
-    echo "-----------------------------------------------------"
-    echo "🔹 **Pods:**"
-    kubectl get pods -n test-pods --no-headers | awk '{print "NAME:", $1, "\t READY:", $2, "\t STATUS:", $3, "\t RESTARTS:", $4, "\t AGE:", $5}'
-    echo "-----------------------------------------------------"
-
-    echo "🔹 **Deployments:**"
-    kubectl get deployments -n test-pods --no-headers | awk '{print "NAME:", $1, "\t READY:", $2, "\t UP-TO-DATE:", $3, "\t AVAILABLE:", $4, "\t AGE:", $5}'
-    echo "-----------------------------------------------------"
-
-    echo "🔹 **Services:**"
-    kubectl get services -n test-pods --no-headers | awk '{print "NAME:", $1, "\t TYPE:", $2, "\t CLUSTER-IP:", $3, "\t EXTERNAL-IP:", $4, "\t PORT(S):", $5, "\t AGE:", $6}'
-    echo "-----------------------------------------------------"
-
-    echo "🔹 **ReplicaSets:**"
-    kubectl get replicasets -n test-pods --no-headers | awk '{print "NAME:", $1, "\t DESIRED:", $2, "\t CURRENT:", $3, "\t READY:", $4, "\t AGE:", $5}'
-    echo "-----------------------------------------------------"
-
-    echo "🔹 **ClusterSecretStore:**"
-    kubectl get clustersecretstore -n test-pods --no-headers | awk '{print "NAME:", $1, "\t AGE:", $2, "\t STATUS:", $3, "\t CAPABILITIES:", $4, "\t READY:", $5}'
-    echo "-----------------------------------------------------"
-
-    echo "🔹 **ExternalSecrets:**"
-    kubectl get externalsecrets -n test-pods --no-headers | awk '{print "NAME:", $1, "\t STORE:", $2, "\t REFRESH INTERVAL:", $3, "\t STATUS:", $4, "\t READY:", $5}'
-    echo "-----------------------------------------------------"
-}
-
-# Step 1: Check if the namespace 'test-pods' exists
-echo "🔹 Checking if namespace 'test-pods' exists..."
-kubectl get namespace test-pods &>/dev/null
-if [ $? -eq 0 ]; then
-    echo "✅ Namespace 'test-pods' already exists."
-else
-    echo "❌ Namespace 'test-pods' does not exist. Creating namespace..."
-    kubectl create namespace test-pods
-fi
-
-# Step 2: Delete existing Boskos resources if any
-echo "🔹 Deleting existing Boskos resources..."
-kubectl delete configmap resources -n test-pods &>/dev/null
-kubectl delete configmap boskos-config -n test-pods &>/dev/null
-kubectl delete clustersecretstore secretstore-ibm -n test-pods &>/dev/null
-kubectl delete externalsecret external-secret-janitor -n test-pods &>/dev/null
-kubectl delete deployments boskos-janitor-ibmcloud boskos-reaper boskos -n test-pods &>/dev/null
-kubectl delete service boskos -n test-pods &>/dev/null
-kubectl delete customresourcedefinition dynamicresourcelifecycles.boskos.k8s.io resources.boskos.k8s.io &>/dev/null
-kubectl delete clusterrole boskos &>/dev/null
-kubectl delete serviceaccount boskos &>/dev/null
-kubectl delete clusterrolebinding boskos &>/dev/null
-
-# Step 3: Update the ConfigMap with the new CONFIG_NAME
-CONFIG_NAME=$1  # Assuming the config name is passed as the first argument
 if [ -z "$CONFIG_NAME" ]; then
-    echo "❌ Error: Config name is required."
-    echo "Usage: ./deploy_boskos.sh <config-name>"
+    echo -e "\033[1;31m❌ Error: Config name is required.\033[0m"
+    echo -e "   Usage: ./deploy_boskos.sh <config-name>"
     exit 1
 fi
 
-echo "🔹 Updating ConfigMap with new config name: $CONFIG_NAME"
-kubectl create configmap resources -n test-pods --from-literal=boskos-resources="resources:\n  - type: \"vpc-service\"\n    state: free\n    names:\n      - \"$CONFIG_NAME\"" --dry-run=client -o yaml | kubectl apply -f -
+echo -e "\n🔹 \033[1;34mChecking if namespace '$NAMESPACE' exists...\033[0m"
+if ! kubectl get namespace "$NAMESPACE" &>/dev/null; then
+    echo -e "🛠️  Namespace '$NAMESPACE' does not exist. Creating..."
+    kubectl create namespace "$NAMESPACE"
+else
+    echo -e "✅ Namespace '$NAMESPACE' already exists."
+fi
 
-# Step 4: Apply Boskos resources
-echo "🔹 Applying Boskos configuration..."
-kubectl apply -f boskos/.
+echo -e "\n🔹 \033[1;34mDeleting existing Boskos resources...\033[0m"
+kubectl delete -f boskos/ --ignore-not-found=true
 
-# Step 5: Wait for resources to become ready
-echo "⏳ Waiting for resources to become ready..."
-while true; do
-    check_resources_ready
-    if [ $? -eq 0 ]; then
-        echo "✅ All resources are now ready!"
+echo -e "\n🔹 \033[1;34mUpdating $CONFIGMAP_FILE with new config name: $CONFIG_NAME\033[0m"
+cat <<EOF > "$CONFIGMAP_FILE"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: resources
+  namespace: $NAMESPACE
+data:
+  boskos-resources.yaml: |
+    resources:
+      - type: "vpc-service"
+        state: free
+        names:
+          - "$CONFIG_NAME"
+EOF
+
+echo -e "\n🔹 \033[1;34mApplying Boskos configuration...\033[0m"
+kubectl apply -f boskos/
+
+echo -e "\n⏳ \033[1;33mWaiting for resources to become ready...\033[0m"
+spin='|/-\'
+MAX_RETRIES=10
+i=0
+
+while [ $MAX_RETRIES -gt 0 ]; do
+    NOT_READY_RESOURCES=()
+    
+    PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$3 != "Running" && $3 != "Completed" {print $1}')
+    DEPLOYMENTS_NOT_READY=$(kubectl get deployments -n "$NAMESPACE" --no-headers 2>/dev/null | awk '$2 != $3 {print $1}')
+    CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $4}' | grep -wq 'True' || echo "Not Ready")
+    EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers 2>/dev/null | awk '{print $5}' | grep -wq 'True' || echo "Not Ready")
+
+    [[ -n "$PODS_NOT_READY" ]] && NOT_READY_RESOURCES+=("Pods")
+    [[ -n "$DEPLOYMENTS_NOT_READY" ]] && NOT_READY_RESOURCES+=("Deployments")
+    [[ "$CLUSTER_SECRET_READY" == "Not Ready" ]] && NOT_READY_RESOURCES+=("ClusterSecretStore")
+    [[ "$EXTERNAL_SECRET_READY" == "Not Ready" ]] && NOT_READY_RESOURCES+=("ExternalSecrets")
+
+    if [ ${#NOT_READY_RESOURCES[@]} -eq 0 ]; then
+        echo -e "\n✅ \033[1;32mAll resources are running successfully!\033[0m"
         break
-    else
-        echo "⏳ Waiting... Resources are not fully ready yet."
-        sleep 5  # Check every 5 seconds
     fi
+
+    printf "\r⏳ \033[1;33mWaiting... ${spin:i++%${#spin}:1} (${MAX_RETRIES}s left)\033[0m"
+    sleep 5
+    MAX_RETRIES=$((MAX_RETRIES - 1))
 done
 
-# Step 6: Output current resource status in formatted table
-print_resource_status
+if [ ${#NOT_READY_RESOURCES[@]} -ne 0 ]; then
+    echo -e "\n❌ \033[1;31mDeployment completed with errors.\033[0m"
+    echo -e "The following resources are not fully running:"
+    for res in "${NOT_READY_RESOURCES[@]}"; do
+        echo -e "   - \033[1;31m$res\033[0m"
+    done
+    echo -e "\n🔹 \033[1;34mCurrent Resource Status:\033[0m"
+    kubectl get pods,deployments,clustersecretstore,externalsecrets -n "$NAMESPACE"
+    exit 1
+fi
+
+echo -e "\n✅ \033[1;32mBoskos deployment completed successfully!\033[0m 🚀"
+
+# Fetching deployed resources
+echo -e "\nFetching deployed resources in namespace: $NAMESPACE"
+echo -e "-----------------------------------------------------"
+
+echo -e "\n🔹 \033[1;34mPods:\033[0m"
+kubectl get pods -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name,:status.phase,:status.containerStatuses[0].restartCount,:metadata.creationTimestamp"
+
+echo -e "\n-----------------------------------------------------"
+echo -e "\n🔹 \033[1;34mClusterSecretStore:\033[0m"
+kubectl get clustersecretstore -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name,:status.status,:status.capabilities,:status.ready"
+
+echo -e "\n-----------------------------------------------------"
+echo -e "\n🔹 \033[1;34mExternalSecrets:\033[0m"
+kubectl get externalsecrets -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name,:spec.store,:spec.refreshInterval,:status.status,:status.ready"
+
+echo -e "-----------------------------------------------------"
