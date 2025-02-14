@@ -135,15 +135,6 @@ done
 
 echo ""
 echo "🔹 Final Resource Status:"
-#!/bin/bash
-
-NAMESPACE=$1
-
-if [ -z "$NAMESPACE" ]; then
-    echo "Usage: $0 <namespace>"
-    exit 1
-fi
-
 # Function to print table header
 print_header() {
     printf "\n🔹 %s:\n" "$1"
