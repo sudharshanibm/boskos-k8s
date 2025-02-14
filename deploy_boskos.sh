@@ -55,7 +55,7 @@ kubectl apply -f boskos/
 # Wait for resources to initialize with an animation
 echo -e "\n⏳ ${YELLOW}Waiting for resources to become ready...${NC}"
 
-spin=("/" "-" "\\" "|") 
+spin=("█▒▒▒▒▒▒▒▒▒" "███▒▒▒▒▒▒▒" "█████▒▒▒▒▒" "██████████") 
 i=0
 start_time=$(date +%s)
 while true; do
