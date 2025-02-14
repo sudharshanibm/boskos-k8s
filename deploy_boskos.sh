@@ -133,67 +133,61 @@ while true; do
 done
 
 
+echo "✅ All resources are successfully initialized!"
 
-echo -e "\n✅ All resources are successfully initialized!"
+echo ""
+echo "🔹 Final Resource Status:"
 
-# Final Resource Status
-echo -e "\n🔹 \033[1;34mFinal Resource Status:\033[0m"
+# Pods Section
+echo ""
+echo "🔹 Pods:"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+echo "| NAME                                                       | READY           | STATUS           | RESTARTS     | AGE     |     |"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+kubectl get pods --no-headers | awk '{ printf "| %-60s | %-15s | %-16s | %-12s | %-7s |     |\n", $1, $2, $3, $4, $5 }'
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
 
-# Pods
-echo -e "\n🔹 \033[1;34mPods:\033[0m"
-printf "%-35s %-8s %-10s %-10s %-10s\n" "Pod Name" "Ready" "Status" "Restarts" "Age"
-echo -e "+-----------------------------------+--------+------------+------------+------------+"
-# Add the pod statuses here (replace with actual values)
-printf "%-35s %-8s %-10s %-10s %-10s\n" "boskos-857b8b946f-9xd66" "1/1" "Running" "0" "6s"
-printf "%-35s %-8s %-10s %-10s %-10s\n" "boskos-janitor-ibmcloud-7d6696f99d-nssz4" "1/1" "Running" "0" "6s"
-printf "%-35s %-8s %-10s %-10s %-10s\n" "boskos-janitor-ibmcloud-7d6696f99d-zzrnp" "1/1" "Running" "0" "6s"
-printf "%-35s %-8s %-10s %-10s %-10s\n" "boskos-reaper-7856d59bbf-m8t68" "1/1" "Running" "0" "6s"
-printf "%-35s %-8s %-10s %-10s %-10s\n" "debug-pod" "1/1" "Running" "0" "9d"
-echo -e "+-----------------------------------+--------+------------+------------+------------+"
+# ClusterSecretStore Section
+echo ""
+echo "🔹 ClusterSecretStore:"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+echo "| NAME                                                       | AGE             | STATUS           | CAPABILITIES | READY   |     |"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+kubectl get clustersecretstore --no-headers | awk '{ printf "| %-60s | %-7s | %-16s | %-12s | %-7s |     |\n", $1, $2, $3, $4, $5 }'
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
 
-# ClusterSecretStore
-echo -e "\n🔹 \033[1;34mClusterSecretStore:\033[0m"
-printf "%-25s %-8s %-10s %-10s\n" "Name" "Age" "Status" "AccessMode"
-echo -e "+-------------------------+--------+------------+------------+"
-# Add the cluster secret status here (replace with actual values)
-printf "%-25s %-8s %-10s %-10s\n" "secretstore-ibm" "6s" "Valid" "ReadOnly"
-echo -e "+-------------------------+--------+------------+------------+"
+# ExternalSecrets Section
+echo ""
+echo "🔹 ExternalSecrets:"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+echo "| NAME                                                       | STORE           | REFRESH INTERVAL | STATUS       | READY   |     |"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+kubectl get externalsecrets --no-headers | awk '{ printf "| %-60s | %-15s | %-16s | %-12s | %-7s |     |\n", $1, $2, $3, $4, $5 }'
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
 
-# ExternalSecrets
-echo -e "\n🔹 \033[1;34mExternalSecrets:\033[0m"
-printf "%-35s %-25s %-10s %-10s\n" "Name" "Secret Store" "Age" "Status"
-echo -e "+-----------------------------------+------------------------+------------+------------+"
-# Add the external secret status here (replace with actual values)
-printf "%-35s %-25s %-10s %-10s\n" "external-secret-janitor" "secretstore-ibm" "60m" "SecretSynced"
-echo -e "+-----------------------------------+------------------------+------------+------------+"
+# Deployments Section
+echo ""
+echo "🔹 Deployments:"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+echo "| NAME                                                       | READY           | UP-TO-DATE       | AVAILABLE    | AGE     |     |"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+kubectl get deployments --no-headers | awk '{ printf "| %-60s | %-15s | %-16s | %-12s | %-7s |     |\n", $1, $2, $3, $4, $5 }'
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
 
-# Deployments, ReplicaSets, and Services
-echo -e "\n🔹 \033[1;34mDeployments, ReplicaSets, and Services in '$NAMESPACE':\033[0m"
+# ReplicaSets Section
+echo ""
+echo "🔹 ReplicaSets:"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+echo "| NAME                                                       | DESIRED         | CURRENT          | READY        | AGE     |     |"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+kubectl get replicasets --no-headers | awk '{ printf "| %-60s | %-7s | %-15s | %-12s | %-7s |     |\n", $1, $2, $3, $4, $5 }'
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
 
-# Deployments
-echo -e "\n🔹 \033[1;34mDeployments:\033[0m"
-printf "%-25s %-8s %-8s %-8s\n" "Name" "Replicas" "Ready" "Current"
-echo -e "+-------------------------+--------+--------+--------+"
-# Add the deployment statuses here (replace with actual values)
-printf "%-25s %-8s %-8s %-8s\n" "boskos" "1/1" "1" "1"
-printf "%-25s %-8s %-8s %-8s\n" "boskos-janitor-ibmcloud" "2/2" "2" "2"
-printf "%-25s %-8s %-8s %-8s\n" "boskos-reaper" "1/1" "1" "1"
-echo -e "+-------------------------+--------+--------+--------+"
-
-# ReplicaSets
-echo -e "\n🔹 \033[1;34mReplicaSets:\033[0m"
-printf "%-25s %-8s %-8s %-8s\n" "Name" "Replicas" "Ready" "Current"
-echo -e "+-------------------------+--------+--------+--------+"
-# Add the replica set statuses here (replace with actual values)
-printf "%-25s %-8s %-8s %-8s\n" "boskos-857b8b946f" "1" "1" "1"
-printf "%-25s %-8s %-8s %-8s\n" "boskos-janitor-ibmcloud-7d6696f99d" "2" "2" "2"
-printf "%-25s %-8s %-8s %-8s\n" "boskos-reaper-7856d59bbf" "1" "1" "1"
-echo -e "+-------------------------+--------+--------+--------+"
-
-# Services
-echo -e "\n🔹 \033[1;34mServices:\033[0m"
-printf "%-25s %-15s %-15s\n" "Name" "Type" "Cluster IP"
-echo -e "+-------------------------+-------------------+-------------------+"
-# Add the service statuses here (replace with actual values)
-printf "%-25s %-15s %-15s\n" "boskos" "ClusterIP" "10.110.42.232"
-echo -e "+-------------------------+-------------------+-------------------+"
+# Services Section
+echo ""
+echo "🔹 Services:"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+echo "| NAME                                                       | TYPE            | CLUSTER-IP       | EXTERNAL-IP  | PORT(S) | AGE |"
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+kubectl get services --no-headers | awk '{ printf "| %-60s | %-15s | %-16s | %-12s | %-7s | %-7s |\n", $1, $2, $3, $4, $5, $6 }'
+echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
