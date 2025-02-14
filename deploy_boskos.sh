@@ -6,7 +6,7 @@ CONFIG_NAME=$1
 NAMESPACE="test-pods"
 CONFIGMAP_FILE="boskos/boskos-configmap.yaml"
 MAX_WAIT=300  # Max wait time in seconds
-INTERVAL=5    # Check every 5 seconds
+INTERVAL=0.5    # Check every 5 seconds
 
 # Colors
 RED='\033[1;31m'
