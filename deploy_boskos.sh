@@ -135,13 +135,6 @@ done
 
 echo ""
 echo "🔹 Final Resource Status:"
-#!/bin/bash
-
-NAMESPACE=$1
-if [ -z "$NAMESPACE" ]; then
-    echo "Usage: $0 <namespace>"
-    exit 1
-fi
 
 # Function to print a section with a title
 echo_section() {
