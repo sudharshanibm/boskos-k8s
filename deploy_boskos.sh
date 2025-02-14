@@ -55,7 +55,7 @@ kubectl apply -f boskos/
 # Wait for resources to initialize with an animation
 echo -e "\n⏳ ${YELLOW}Waiting for resources to become ready...${NC}"
 
-spin="/-\|"
+spin=("/" "-" "\\" "|") 
 i=0
 start_time=$(date +%s)
 while true; do
@@ -124,9 +124,12 @@ while true; do
     fi
 
     # Spinner animation
-    i=$(( (i+1) %4 )); # Loop through the spinner array
-    echo -ne "\r$spin$i"  # Update spinner symbol
-    sleep "$INTERVAL"
+    # Update spinner symbol and print it
+    echo -ne "${spin[$i]}"
+
+    # Increment and loop the spinner symbols
+    i=$(( (i+1) %4 ))  # Loop through the spinner array
+    sleep "$INTERVAL"   # Set the interval for updates
 done
 
 
