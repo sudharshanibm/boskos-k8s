@@ -133,8 +133,6 @@ while true; do
 done
 
 
-echo "✅ All resources are successfully initialized!"
-
 echo ""
 echo "🔹 Final Resource Status:"
 
