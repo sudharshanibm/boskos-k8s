@@ -55,13 +55,10 @@ kubectl apply -f boskos/
 # Wait for resources to initialize with an animation
 echo -e "\n⏳ ${YELLOW}Waiting for resources to become ready...${NC}"
 
-spin="|/-\\"
+spin="⏳⏰🕰️⌛"  # Rotating symbols
 i=0
 start_time=$(date +%s)
 while true; do
-    # Clear previous output for better visibility
-    clear
-
     # Fetch statuses
     PODS=$(kubectl get pods -n "$NAMESPACE" --no-headers || true)
     CLUSTER_SECRET=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers || true)
@@ -99,6 +96,9 @@ while true; do
         EXTERNAL_SECRET_STICKER="⚠️"
     fi
 
+    # Clear the screen to give the illusion of animation
+    clear
+
     # Display real-time status
     echo -e "\n🔹 ${BLUE}Current Resource Status:${NC}"
     echo -e "+------------------------+-------------------+"
@@ -128,6 +128,8 @@ while true; do
     echo -ne "\r$spin$i"
     sleep "$INTERVAL"
 done
+
+
 
 # Final output with resource details in a separate section
 echo -e "\n🔹 ${CYAN}Final Resource Status:${NC}"
