@@ -49,13 +49,15 @@ data:
           - "$CONFIG_NAME"
 EOF
 
+echo -e "\n🔹 ${BLUE}Applying Boskos configuration...${NC}"
+kubectl apply -f boskos/
+
 # Wait for resources to initialize with an animation
 echo -e "\n⏳ ${YELLOW}Waiting for resources to become ready...${NC}"
 
 spin="⏳⏰🕰️⌛"  # Rotating symbols
 i=0
 start_time=$(date +%s)
-
 while true; do
     # Fetch statuses
     PODS=$(kubectl get pods -n "$NAMESPACE" --no-headers || true)
@@ -94,7 +96,7 @@ while true; do
         EXTERNAL_SECRET_STICKER="⚠️"
     fi
 
-    # Clear the screen to give the illusion of animation (without overlapping)
+    # Clear the screen to give the illusion of animation
     clear
 
     # Display real-time status
@@ -122,8 +124,8 @@ while true; do
     fi
 
     # Spinner animation
-    i=$(( (i+1) %4 )) # Loop through the spinner array
-    echo -ne "\r$spin$i"  # Display spinner symbol in the same line
+    i=$(( (i+1) %4 )); # Loop through the spinner array
+    echo -ne "\r$spin$i"
     sleep "$INTERVAL"
 done
 
