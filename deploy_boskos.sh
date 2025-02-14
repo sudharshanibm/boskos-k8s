@@ -135,40 +135,57 @@ done
 
 echo ""
 echo "🔹 Final Resource Status:"
+#!/bin/bash
+
+NAMESPACE=$1
+
+if [ -z "$NAMESPACE" ]; then
+    echo "Usage: $0 <namespace>"
+    exit 1
+fi
+
 # Function to print table header
 print_header() {
     printf "\n🔹 %s:\n" "$1"
-    printf "+------------------------------------------------------------+-----------------+------------------+--------------+---------+\n"
-    printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n" "NAME" "READY" "STATUS" "RESTARTS" "AGE"
-    printf "+------------------------------------------------------------+-----------------+------------------+--------------+---------+\n"
+    printf "%s\n" "$2"
 }
 
 # Function to print table footer
 print_footer() {
-    printf "+------------------------------------------------------------+-----------------+------------------+--------------+---------+\n"
+    printf "%s\n" "$1"
 }
 
-# Print Pods
-print_header "Pods"
-kubectl get pods -n "$NAMESPACE" --no-headers | awk '{ printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n", $1, $2, $3, $4, $5 }'
-print_footer
+# Pods
+print_header "Pods" "+--------------------------------------------------+--------+----------+----------+------+
+| NAME                                         | READY  | STATUS   | RESTARTS | AGE  |
++--------------------------------------------------+--------+----------+----------+------+"
+kubectl get pods -n "$NAMESPACE" --no-headers | awk '{ printf "| %-46s | %-6s | %-8s | %-8s | %-4s |\n", $1, $2, $3, $4, $5 }'
+print_footer "+--------------------------------------------------+--------+----------+----------+------+"
 
-# Print Deployments
-print_header "Deployments"
-kubectl get deployments -n "$NAMESPACE" --no-headers | awk '{ printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n", $1, $2, $3, $4, $5 }'
-print_footer
+# Deployments
+print_header "Deployments" "+----------------------------------------+--------+------------+-----------+------+
+| NAME                                   | READY  | UP-TO-DATE | AVAILABLE | AGE  |
++----------------------------------------+--------+------------+-----------+------+"
+kubectl get deployments -n "$NAMESPACE" --no-headers | awk '{ printf "| %-38s | %-6s | %-10s | %-9s | %-4s |\n", $1, $2, $3, $4, $5 }'
+print_footer "+----------------------------------------+--------+------------+-----------+------+"
 
-# Print Services
-print_header "Services"
-kubectl get services -n "$NAMESPACE" --no-headers | awk '{ printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n", $1, $2, $3, $4, $5 }'
-print_footer
+# Services
+print_header "Services" "+------------------+-----------+---------------+-------------+--------+
+| NAME             | TYPE      | CLUSTER-IP    | EXTERNAL-IP | PORTS  |
++------------------+-----------+---------------+-------------+--------+"
+kubectl get services -n "$NAMESPACE" --no-headers | awk '{ printf "| %-16s | %-9s | %-13s | %-11s | %-6s |\n", $1, $2, $3, $4, $5 }'
+print_footer "+------------------+-----------+---------------+-------------+--------+"
 
-# Print ClusterSecretStore
-print_header "ClusterSecretStore"
-kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{ printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n", $1, $2, $3, $4, $5 }'
-print_footer
+# ClusterSecretStore
+print_header "ClusterSecretStore" "+----------------------------------------------+------+--------+-------------+------+
+| NAME                                         | AGE  | STATUS | CAPABILITIES | READY|
++----------------------------------------------+------+--------+-------------+------+"
+kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{ printf "| %-44s | %-4s | %-6s | %-11s | %-5s |\n", $1, $2, $3, $4, $5 }'
+print_footer "+----------------------------------------------+------+--------+-------------+------+"
 
-# Print ExternalSecrets
-print_header "ExternalSecrets"
-kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{ printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n", $1, $2, $3, $4, $5 }'
-print_footer
+# ExternalSecrets
+print_header "ExternalSecrets" "+----------------------------------------------+----------------+-----------------+--------------+------+
+| NAME                                         | STORE          | REFRESH INTERVAL | STATUS       | READY|
++----------------------------------------------+----------------+-----------------+--------------+------+"
+kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{ printf "| %-44s | %-14s | %-15s | %-12s | %-5s |\n", $1, $2, $3, $4, $5 }'
+print_footer "+----------------------------------------------+----------------+-----------------+--------------+------+"
