@@ -13,6 +13,7 @@ RED='\033[1;31m'
 GREEN='\033[1;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[1;34m'
+CYAN='\033[1;36m'
 NC='\033[0m'  # No color
 
 if [ -z "$CONFIG_NAME" ]; then
@@ -51,8 +52,11 @@ EOF
 echo -e "\n🔹 ${BLUE}Applying Boskos configuration...${NC}"
 kubectl apply -f boskos/
 
+# Wait for resources to initialize with an animation
 echo -e "\n⏳ ${YELLOW}Waiting for resources to become ready...${NC}"
 
+spin="|/-\\"
+i=0
 start_time=$(date +%s)
 while true; do
     # Clear previous output for better visibility
@@ -119,17 +123,35 @@ while true; do
         break
     fi
 
+    # Spinner animation
+    i=$(( (i+1) %4 )); # Loop through the spinner array
+    echo -ne "\r$spin$i"
     sleep "$INTERVAL"
 done
 
 # Final output with resource details in a separate section
-echo -e "\n🔹 ${BLUE}Final Resource Status:${NC}"
+echo -e "\n🔹 ${CYAN}Final Resource Status:${NC}"
 
 echo -e "\n🔹 ${BLUE}Pods:${NC}"
-kubectl get pods -n "$NAMESPACE"
+kubectl get pods -n "$NAMESPACE" --no-headers | awk '{printf "%-40s %-20s %-10s %-10s %-10s\n", $1, $2, $3, $4, $5}' | column -t
 
 echo -e "\n🔹 ${BLUE}ClusterSecretStore:${NC}"
-kubectl get clustersecretstore -n "$NAMESPACE"
+kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{printf "%-40s %-10s %-10s %-10s\n", $1, $2, $3, $4}' | column -t
 
 echo -e "\n🔹 ${BLUE}ExternalSecrets:${NC}"
-kubectl get externalsecrets -n "$NAMESPACE"
+kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{printf "%-40s %-20s %-10s %-10s\n", $1, $2, $3, $4}' | column -t
+
+# Show Deployments, ReplicaSets, and Services
+echo -e "\n🔹 ${CYAN}Deployments, ReplicaSets, and Services in '$NAMESPACE':${NC}"
+
+# Deployments
+echo -e "\n🔹 ${GREEN}Deployments:${NC}"
+kubectl get deployments -n "$NAMESPACE" --no-headers | awk '{printf "%-30s %-20s %-10s %-10s\n", $1, $2, $3, $4}' | column -t
+
+# ReplicaSets
+echo -e "\n🔹 ${GREEN}ReplicaSets:${NC}"
+kubectl get replicasets -n "$NAMESPACE" --no-headers | awk '{printf "%-30s %-20s %-10s %-10s\n", $1, $2, $3, $4}' | column -t
+
+# Services
+echo -e "\n🔹 ${GREEN}Services:${NC}"
+kubectl get services -n "$NAMESPACE" --no-headers | awk '{printf "%-30s %-20s %-10s %-10s\n", $1, $2, $3, $4}' | column -t
