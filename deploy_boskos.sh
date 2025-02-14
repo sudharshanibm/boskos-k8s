@@ -5,6 +5,8 @@ set -e  # Exit on error
 CONFIG_NAME=$1
 NAMESPACE="test-pods"
 CONFIGMAP_FILE="boskos/boskos-configmap.yaml"
+MAX_WAIT=300  # Max wait time in seconds
+INTERVAL=5    # Check every 5 seconds
 
 if [ -z "$CONFIG_NAME" ]; then
     echo -e "\033[1;31m❌ Error: Config name is required.\033[0m"
@@ -42,66 +44,41 @@ EOF
 echo -e "\n🔹 \033[1;34mApplying Boskos configuration...\033[0m"
 kubectl apply -f boskos/
 
-# Wait for resources to initialize with a spinner animation
-echo -e "\n⏳ \033[1;33mWaiting for resources to initialize...\033[0m"
-spin="|/-\\"
-i=0
-while ps aux | grep -q '[k]ubectl apply'; do
-    i=$(( (i+1) %4 )); # Loop through the spinner array
-    echo -ne "\r$spin$i"
-    sleep 0.1
+echo -e "\n⏳ \033[1;33mWaiting for resources to become ready...\033[0m"
+
+start_time=$(date +%s)
+while true; do
+    # Check the status of resources
+    PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers | grep -v 'Running' || true)
+    CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $5}')
+    CLUSTER_SECRET_STATUS=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $3}')
+    EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{print $5}')
+    EXTERNAL_SECRET_STATUS=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{print $4}')
+
+    NOT_READY_RESOURCES=()
+    if [[ -n "$PODS_NOT_READY" ]]; then NOT_READY_RESOURCES+=("Pods"); fi
+    if [[ "$CLUSTER_SECRET_READY" != "True" || "$CLUSTER_SECRET_STATUS" != "Valid" ]]; then NOT_READY_RESOURCES+=("ClusterSecretStore"); fi
+    if [[ "$EXTERNAL_SECRET_READY" != "True" || "$EXTERNAL_SECRET_STATUS" != "SecretSynced" ]]; then NOT_READY_RESOURCES+=("ExternalSecrets"); fi
+
+    # If all resources are ready, exit the loop
+    if [ ${#NOT_READY_RESOURCES[@]} -eq 0 ]; then
+        echo -e "\n✅ \033[1;32mAll resources are ready!\033[0m"
+        break
+    fi
+
+    # Check for timeout
+    current_time=$(date +%s)
+    elapsed_time=$((current_time - start_time))
+    if [ "$elapsed_time" -ge "$MAX_WAIT" ]; then
+        echo -e "\n⏳ \033[1;31mTimeout: Some resources are still not ready after $MAX_WAIT seconds.\033[0m"
+        break
+    fi
+
+    # Display progress and wait before checking again
+    echo -ne "\r⏳ Waiting... Resources not ready: ${NOT_READY_RESOURCES[*]}     "
+    sleep "$INTERVAL"
 done
-echo -ne "\r✅ Resources initialized!            \n"
 
-# Check the resources status
-echo -e "\n🔹 \033[1;34mChecking the resource status...\033[0m"
-
-# Check Pods status
-PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers | awk '$3 != "Running" {print $1}')
-
-# Check ClusterSecretStore status
-CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $5}')
-CLUSTER_SECRET_STATUS=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $3}')
-
-# Check ExternalSecrets status
-EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{print $5}')
-EXTERNAL_SECRET_STATUS=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{print $4}')
-
-# Set a flag for errors
-NOT_READY_RESOURCES=()
-
-# Check readiness
-if [[ -n "$PODS_NOT_READY" ]]; then
-    NOT_READY_RESOURCES+=("Pods")
-fi
-
-if [[ "$CLUSTER_SECRET_READY" != "True" || "$CLUSTER_SECRET_STATUS" != "Valid" ]]; then
-    NOT_READY_RESOURCES+=("ClusterSecretStore")
-fi
-
-if [[ "$EXTERNAL_SECRET_READY" != "True" || "$EXTERNAL_SECRET_STATUS" != "SecretSynced" ]]; then
-    NOT_READY_RESOURCES+=("ExternalSecrets")
-fi
-
-# Report status in a table format
-echo -e "\n🔹 \033[1;34mResource Status:\033[0m"
-if [ ${#NOT_READY_RESOURCES[@]} -gt 0 ]; then
-    echo -e "\033[1;31mDeployment completed with errors.\033[0m"
-    echo -e "The following resources are not fully running:"
-    printf "%-25s %-10s\n" "Resource" "Status"
-    printf "%-25s %-10s\n" "---------------------------------" "----------"
-    for res in "${NOT_READY_RESOURCES[@]}"; do
-        printf "\033[1;31m%-25s %-10s\033[0m\n" "$res" "Not Ready"
-    done
-    exit 1
-else
-    echo -e "\033[1;32mAll resources are running successfully!\033[0m"
-    printf "%-25s %-10s\n" "Resource" "Status"
-    printf "%-25s %-10s\n" "---------------------------------" "----------"
-    printf "\033[1;32m%-25s %-10s\033[0m\n" "Pods" "Running"
-    printf "\033[1;32m%-25s %-10s\033[0m\n" "ClusterSecretStore" "Valid"
-    printf "\033[1;32m%-25s %-10s\033[0m\n" "ExternalSecrets" "Synced"
-fi
-
-
+# Show final status
+echo -e "\n\n🔹 \033[1;34mFinal Resource Status:\033[0m"
 kubectl get pods,clustersecretstore,externalsecrets -n "$NAMESPACE" --no-headers | column -t
