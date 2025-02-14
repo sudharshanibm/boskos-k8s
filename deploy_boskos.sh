@@ -135,32 +135,40 @@ done
 
 echo ""
 echo "🔹 Final Resource Status:"
-
-# Function to print a section with a title
-echo_section() {
-    echo ""
-    echo "==================== $1 ===================="
-    echo ""
-    printf "%s\n" "$2"
-    echo ""
+# Function to print table header
+print_header() {
+    printf "\n🔹 %s:\n" "$1"
+    printf "+------------------------------------------------------------+-----------------+------------------+--------------+---------+\n"
+    printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n" "NAME" "READY" "STATUS" "RESTARTS" "AGE"
+    printf "+------------------------------------------------------------+-----------------+------------------+--------------+---------+\n"
 }
 
-# Get pods output
-PODS=$(kubectl get pods -n "$NAMESPACE" --no-headers | awk 'BEGIN { printf "%-50s %-10s %-10s %-10s %-10s\n", "NAME", "READY", "STATUS", "RESTARTS", "AGE" } { printf "%-50s %-10s %-10s %-10s %-10s\n", $1, $2, $3, $4, $5 }')
-echo_section "🔹 PODS" "$PODS"
+# Function to print table footer
+print_footer() {
+    printf "+------------------------------------------------------------+-----------------+------------------+--------------+---------+\n"
+}
 
-# Get deployments output
-DEPLOYMENTS=$(kubectl get deployments -n "$NAMESPACE" --no-headers | awk 'BEGIN { printf "%-40s %-10s %-10s %-10s %-10s\n", "NAME", "READY", "UP-TO-DATE", "AVAILABLE", "AGE" } { printf "%-40s %-10s %-10s %-10s %-10s\n", $1, $2, $3, $4, $5 }')
-echo_section "🔹 DEPLOYMENTS" "$DEPLOYMENTS"
+# Print Pods
+print_header "Pods"
+kubectl get pods -n "$NAMESPACE" --no-headers | awk '{ printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n", $1, $2, $3, $4, $5 }'
+print_footer
 
-# Get services output
-SERVICES=$(kubectl get service -n "$NAMESPACE" --no-headers | awk 'BEGIN { printf "%-30s %-15s %-20s %-15s %-10s\n", "NAME", "TYPE", "CLUSTER-IP", "EXTERNAL-IP", "PORT(S)" } { printf "%-30s %-15s %-20s %-15s %-10s\n", $1, $2, $3, $4, $5 }')
-echo_section "🔹 SERVICES" "$SERVICES"
+# Print Deployments
+print_header "Deployments"
+kubectl get deployments -n "$NAMESPACE" --no-headers | awk '{ printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n", $1, $2, $3, $4, $5 }'
+print_footer
 
-# Get ClusterSecretStore output
-CLUSTER_SECRET_STORE=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk 'BEGIN { printf "%-50s %-10s %-10s %-15s %-10s\n", "NAME", "AGE", "STATUS", "CAPABILITIES", "READY" } { printf "%-50s %-10s %-10s %-15s %-10s\n", $1, $2, $3, $4, $5 }')
-echo_section "🔹 CLUSTER SECRET STORE" "$CLUSTER_SECRET_STORE"
+# Print Services
+print_header "Services"
+kubectl get services -n "$NAMESPACE" --no-headers | awk '{ printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n", $1, $2, $3, $4, $5 }'
+print_footer
 
-# Get ExternalSecrets output
-EXTERNAL_SECRETS=$(kubectl get externalsecret -n "$NAMESPACE" --no-headers | awk 'BEGIN { printf "%-60s %-20s %-20s %-15s %-10s\n", "NAME", "STORE", "REFRESH INTERVAL", "STATUS", "READY" } { printf "%-60s %-20s %-20s %-15s %-10s\n", $1, $2, $3, $4, $5 }')
-echo_section "🔹 EXTERNAL SECRETS" "$EXTERNAL_SECRETS"
+# Print ClusterSecretStore
+print_header "ClusterSecretStore"
+kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{ printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n", $1, $2, $3, $4, $5 }'
+print_footer
+
+# Print ExternalSecrets
+print_header "ExternalSecrets"
+kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{ printf "| %-58s | %-15s | %-16s | %-12s | %-7s |\n", $1, $2, $3, $4, $5 }'
+print_footer
