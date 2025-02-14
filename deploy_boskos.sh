@@ -8,13 +8,20 @@ CONFIGMAP_FILE="boskos/boskos-configmap.yaml"
 MAX_WAIT=300  # Max wait time in seconds
 INTERVAL=5    # Check every 5 seconds
 
+# Colors
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[1;34m'
+NC='\033[0m'  # No color
+
 if [ -z "$CONFIG_NAME" ]; then
-    echo -e "\033[1;31m❌ Error: Config name is required.\033[0m"
+    echo -e "${RED}❌ Error: Config name is required.${NC}"
     echo -e "   Usage: ./deploy_boskos.sh <config-name>"
     exit 1
 fi
 
-echo -e "\n🔹 \033[1;34mChecking if namespace '$NAMESPACE' exists...\033[0m"
+echo -e "\n🔹 ${BLUE}Checking if namespace '$NAMESPACE' exists...${NC}"
 if ! kubectl get namespace "$NAMESPACE" &>/dev/null; then
     echo -e "🛠️  Namespace '$NAMESPACE' does not exist. Creating..."
     kubectl create namespace "$NAMESPACE"
@@ -22,10 +29,10 @@ else
     echo -e "✅ Namespace '$NAMESPACE' already exists."
 fi
 
-echo -e "\n🔹 \033[1;34mDeleting existing Boskos resources...\033[0m"
+echo -e "\n🔹 ${BLUE}Deleting existing Boskos resources...${NC}"
 kubectl delete -f boskos/ --ignore-not-found=true
 
-echo -e "\n🔹 \033[1;34mUpdating $CONFIGMAP_FILE with new config name: $CONFIG_NAME\033[0m"
+echo -e "\n🔹 ${BLUE}Updating $CONFIGMAP_FILE with new config name: $CONFIG_NAME${NC}"
 cat <<EOF > "$CONFIGMAP_FILE"
 apiVersion: v1
 kind: ConfigMap
@@ -41,44 +48,80 @@ data:
           - "$CONFIG_NAME"
 EOF
 
-echo -e "\n🔹 \033[1;34mApplying Boskos configuration...\033[0m"
+echo -e "\n🔹 ${BLUE}Applying Boskos configuration...${NC}"
 kubectl apply -f boskos/
 
-echo -e "\n⏳ \033[1;33mWaiting for resources to become ready...\033[0m"
+echo -e "\n⏳ ${YELLOW}Waiting for resources to become ready...${NC}"
 
 start_time=$(date +%s)
 while true; do
-    # Check the status of resources
-    PODS_NOT_READY=$(kubectl get pods -n "$NAMESPACE" --no-headers | grep -v 'Running' || true)
-    CLUSTER_SECRET_READY=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $5}')
-    CLUSTER_SECRET_STATUS=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{print $3}')
-    EXTERNAL_SECRET_READY=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{print $5}')
-    EXTERNAL_SECRET_STATUS=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{print $4}')
+    # Clear previous output for better visibility
+    clear
 
-    NOT_READY_RESOURCES=()
-    if [[ -n "$PODS_NOT_READY" ]]; then NOT_READY_RESOURCES+=("Pods"); fi
-    if [[ "$CLUSTER_SECRET_READY" != "True" || "$CLUSTER_SECRET_STATUS" != "Valid" ]]; then NOT_READY_RESOURCES+=("ClusterSecretStore"); fi
-    if [[ "$EXTERNAL_SECRET_READY" != "True" || "$EXTERNAL_SECRET_STATUS" != "SecretSynced" ]]; then NOT_READY_RESOURCES+=("ExternalSecrets"); fi
+    # Fetch statuses
+    PODS=$(kubectl get pods -n "$NAMESPACE" --no-headers || true)
+    CLUSTER_SECRET=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers || true)
+    EXTERNAL_SECRET=$(kubectl get externalsecrets -n "$NAMESPACE" --no-headers || true)
 
-    # If all resources are ready, exit the loop
-    if [ ${#NOT_READY_RESOURCES[@]} -eq 0 ]; then
-        echo -e "\n✅ \033[1;32mAll resources are ready!\033[0m"
+    # Parse statuses
+    PODS_READY=$(echo "$PODS" | grep -E 'Running' | wc -l)
+    PODS_TOTAL=$(echo "$PODS" | wc -l)
+    CLUSTER_SECRET_READY=$(echo "$CLUSTER_SECRET" | awk '{print $5}')
+    CLUSTER_SECRET_STATUS=$(echo "$CLUSTER_SECRET" | awk '{print $3}')
+    EXTERNAL_SECRET_READY=$(echo "$EXTERNAL_SECRET" | awk '{print $5}')
+    EXTERNAL_SECRET_STATUS=$(echo "$EXTERNAL_SECRET" | awk '{print $4}')
+
+    # Set default stickers
+    PODS_STICKER="⏳"
+    CLUSTER_SECRET_STICKER="⏳"
+    EXTERNAL_SECRET_STICKER="⏳"
+
+    # Update stickers based on readiness
+    if [ "$PODS_READY" -eq "$PODS_TOTAL" ] && [ "$PODS_TOTAL" -gt 0 ]; then
+        PODS_STICKER="🚀"
+    elif [ "$PODS_TOTAL" -gt 0 ]; then
+        PODS_STICKER="⚠️"
+    fi
+
+    if [ "$CLUSTER_SECRET_READY" == "True" ] && [ "$CLUSTER_SECRET_STATUS" == "Valid" ]; then
+        CLUSTER_SECRET_STICKER="✅"
+    elif [ -n "$CLUSTER_SECRET_READY" ]; then
+        CLUSTER_SECRET_STICKER="⚠️"
+    fi
+
+    if [ "$EXTERNAL_SECRET_READY" == "True" ] && [ "$EXTERNAL_SECRET_STATUS" == "SecretSynced" ]; then
+        EXTERNAL_SECRET_STICKER="✅"
+    elif [ -n "$EXTERNAL_SECRET_READY" ]; then
+        EXTERNAL_SECRET_STICKER="⚠️"
+    fi
+
+    # Display real-time status
+    echo -e "\n🔹 ${BLUE}Current Resource Status:${NC}"
+    echo -e "+------------------------+-------------------+"
+    echo -e "| ${BLUE}Resource${NC}                | ${BLUE}Status${NC}          |"
+    echo -e "+------------------------+-------------------+"
+    printf "| %-22s | ${YELLOW}%-15s${NC} |\n" "Pods ($PODS_READY/$PODS_TOTAL)" "$PODS_STICKER"
+    printf "| %-22s | ${YELLOW}%-15s${NC} |\n" "ClusterSecretStore" "$CLUSTER_SECRET_STICKER"
+    printf "| %-22s | ${YELLOW}%-15s${NC} |\n" "ExternalSecrets" "$EXTERNAL_SECRET_STICKER"
+    echo -e "+------------------------+-------------------+"
+
+    # Exit loop when all resources are ready
+    if [[ "$PODS_READY" -eq "$PODS_TOTAL" && "$CLUSTER_SECRET_READY" == "True" && "$CLUSTER_SECRET_STATUS" == "Valid" && "$EXTERNAL_SECRET_READY" == "True" && "$EXTERNAL_SECRET_STATUS" == "SecretSynced" ]]; then
+        echo -e "\n✅ ${GREEN}All resources are successfully initialized!${NC}"
         break
     fi
 
-    # Check for timeout
+    # Check timeout
     current_time=$(date +%s)
     elapsed_time=$((current_time - start_time))
     if [ "$elapsed_time" -ge "$MAX_WAIT" ]; then
-        echo -e "\n⏳ \033[1;31mTimeout: Some resources are still not ready after $MAX_WAIT seconds.\033[0m"
+        echo -e "\n❌ ${RED}Timeout: Resources did not become ready within $MAX_WAIT seconds.${NC}"
         break
     fi
 
-    # Display progress and wait before checking again
-    echo -ne "\r⏳ Waiting... Resources not ready: ${NOT_READY_RESOURCES[*]}     "
     sleep "$INTERVAL"
 done
 
-# Show final status
-echo -e "\n\n🔹 \033[1;34mFinal Resource Status:\033[0m"
+# Final output
+echo -e "\n🔹 ${BLUE}Final Resource Status:${NC}"
 kubectl get pods,clustersecretstore,externalsecrets -n "$NAMESPACE" --no-headers | column -t
