@@ -135,57 +135,39 @@ done
 
 echo ""
 echo "🔹 Final Resource Status:"
+#!/bin/bash
 
-# Pods Section
-echo ""
-echo "🔹 Pods:"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
-echo "| NAME                                                       | READY           | STATUS           | RESTARTS     | AGE     |"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
-kubectl get pods -n "$NAMESPACE" --no-headers | awk '{ printf "| %-60s | %-15s | %-16s | %-12s | %-7s |     |\n", $1, $2, $3, $4, $5 }'
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
+NAMESPACE=$1
+if [ -z "$NAMESPACE" ]; then
+    echo "Usage: $0 <namespace>"
+    exit 1
+fi
 
-# ClusterSecretStore Section
-echo ""
-echo "🔹 ClusterSecretStore:"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
-echo "| NAME                                                       | AGE             | STATUS           | CAPABILITIES | READY   |"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
-kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{ printf "| %-60s | %-7s | %-16s | %-12s | %-7s |     |\n", $1, $2, $3, $4, $5 }'
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
+# Function to print a section with a title
+echo_section() {
+    echo ""
+    echo "==================== $1 ===================="
+    echo ""
+    printf "%s\n" "$2"
+    echo ""
+}
 
-# ExternalSecrets Section
-echo ""
-echo "🔹 ExternalSecrets:"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
-echo "| NAME                                                       | STORE           | REFRESH INTERVAL | STATUS       | READY   |"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
-kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{ printf "| %-60s | %-15s | %-16s | %-12s | %-7s |     |\n", $1, $2, $3, $4, $5 }'
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
+# Get pods output
+PODS=$(kubectl get pods -n "$NAMESPACE" --no-headers | awk 'BEGIN { printf "%-50s %-10s %-10s %-10s %-10s\n", "NAME", "READY", "STATUS", "RESTARTS", "AGE" } { printf "%-50s %-10s %-10s %-10s %-10s\n", $1, $2, $3, $4, $5 }')
+echo_section "🔹 PODS" "$PODS"
 
-# Deployments Section
-echo ""
-echo "🔹 Deployments:"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
-echo "| NAME                                                       | READY           | UP-TO-DATE       | AVAILABLE    | AGE     |"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
-kubectl get deployments -n "$NAMESPACE" --no-headers | awk '{ printf "| %-60s | %-15s | %-16s | %-12s | %-7s |     |\n", $1, $2, $3, $4, $5 }'
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
+# Get deployments output
+DEPLOYMENTS=$(kubectl get deployments -n "$NAMESPACE" --no-headers | awk 'BEGIN { printf "%-40s %-10s %-10s %-10s %-10s\n", "NAME", "READY", "UP-TO-DATE", "AVAILABLE", "AGE" } { printf "%-40s %-10s %-10s %-10s %-10s\n", $1, $2, $3, $4, $5 }')
+echo_section "🔹 DEPLOYMENTS" "$DEPLOYMENTS"
 
-# ReplicaSets Section
-echo ""
-echo "🔹 ReplicaSets:"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
-echo "| NAME                                                       | DESIRED         | CURRENT          | READY        | AGE     |"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
-kubectl get replicasets -n "$NAMESPACE" --no-headers | awk '{ printf "| %-60s | %-7s | %-15s | %-12s | %-7s |     |\n", $1, $2, $3, $4, $5 }'
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+"
+# Get services output
+SERVICES=$(kubectl get service -n "$NAMESPACE" --no-headers | awk 'BEGIN { printf "%-30s %-15s %-20s %-15s %-10s\n", "NAME", "TYPE", "CLUSTER-IP", "EXTERNAL-IP", "PORT(S)" } { printf "%-30s %-15s %-20s %-15s %-10s\n", $1, $2, $3, $4, $5 }')
+echo_section "🔹 SERVICES" "$SERVICES"
 
-# Services Section
-echo ""
-echo "🔹 Services:"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
-echo "| NAME                                                       | TYPE            | CLUSTER-IP       | EXTERNAL-IP  | PORT(S) | AGE |"
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
-kubectl get services -n "$NAMESPACE" --no-headers | awk '{ printf "| %-60s | %-15s | %-16s | %-12s | %-7s | %-7s |\n", $1, $2, $3, $4, $5, $6 }'
-echo "+------------------------------------------------------------+-----------------+------------------+--------------+---------+-----+"
+# Get ClusterSecretStore output
+CLUSTER_SECRET_STORE=$(kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk 'BEGIN { printf "%-50s %-10s %-10s %-15s %-10s\n", "NAME", "AGE", "STATUS", "CAPABILITIES", "READY" } { printf "%-50s %-10s %-10s %-15s %-10s\n", $1, $2, $3, $4, $5 }')
+echo_section "🔹 CLUSTER SECRET STORE" "$CLUSTER_SECRET_STORE"
+
+# Get ExternalSecrets output
+EXTERNAL_SECRETS=$(kubectl get externalsecret -n "$NAMESPACE" --no-headers | awk 'BEGIN { printf "%-60s %-20s %-20s %-15s %-10s\n", "NAME", "STORE", "REFRESH INTERVAL", "STATUS", "READY" } { printf "%-60s %-20s %-20s %-15s %-10s\n", $1, $2, $3, $4, $5 }')
+echo_section "🔹 EXTERNAL SECRETS" "$EXTERNAL_SECRETS"
