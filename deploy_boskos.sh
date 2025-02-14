@@ -79,7 +79,7 @@ while true; do
 
     # Update stickers based on readiness
     if [ "$PODS_READY" -eq "$PODS_TOTAL" ] && [ "$PODS_TOTAL" -gt 0 ]; then
-        PODS_STICKER="🚀"
+        PODS_STICKER="✅"
     elif [ "$PODS_TOTAL" -gt 0 ]; then
         PODS_STICKER="⚠️"
     fi
@@ -133,15 +133,6 @@ while true; do
 done
 
 
-
-# Final output with resource details in a separate section
-echo -e "\n🔹 \033[1;34mCurrent Resource Status:\033[0m"
-printf "%-25s %-15s\n" "Resource" "Status"
-echo -e "+------------------------+-------------------+"
-printf "%-25s %-15s\n" "Pods (5/5)" "✅"
-printf "%-25s %-15s\n" "ClusterSecretStore" "✅"
-printf "%-25s %-15s\n" "ExternalSecrets" "✅"
-echo -e "+------------------------+-------------------+"
 
 echo -e "\n✅ All resources are successfully initialized!"
 
@@ -206,4 +197,3 @@ echo -e "+-------------------------+-------------------+-------------------+"
 # Add the service statuses here (replace with actual values)
 printf "%-25s %-15s %-15s\n" "boskos" "ClusterIP" "10.110.42.232"
 echo -e "+-------------------------+-------------------+-------------------+"
-
