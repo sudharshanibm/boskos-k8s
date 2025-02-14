@@ -122,6 +122,14 @@ while true; do
     sleep "$INTERVAL"
 done
 
-# Final output
+# Final output with resource details in a separate section
 echo -e "\n🔹 ${BLUE}Final Resource Status:${NC}"
-kubectl get pods,clustersecretstore,externalsecrets -n "$NAMESPACE" --no-headers | column -t
+
+echo -e "\n🔹 ${BLUE}Pods:${NC}"
+kubectl get pods -n "$NAMESPACE" --no-headers | awk '{printf "%-40s %-20s %-10s %-10s %-10s\n", $1, $2, $3, $4, $5}' | column -t
+
+echo -e "\n🔹 ${BLUE}ClusterSecretStore:${NC}"
+kubectl get clustersecretstore -n "$NAMESPACE" --no-headers | awk '{printf "%-40s %-10s %-10s %-10s\n", $1, $2, $3, $4}' | column -t
+
+echo -e "\n🔹 ${BLUE}ExternalSecrets:${NC}"
+kubectl get externalsecrets -n "$NAMESPACE" --no-headers | awk '{printf "%-40s %-20s %-10s %-10s\n", $1, $2, $3, $4}' | column -t
